@@ -6,13 +6,13 @@
  * 
  ********************************************************************/
 //TODO: automatic left recursion eliminator
-//TODO: ?,+,* operators
+//-DONE: ?,+,* operators
 //TODO: &,! operators
 //TODO: character class selector
 //TODO: placeholder remover
 //TODO: prefix remover
 //-DONE: error handling
-//TODO: collapse values in repeaters (recursive calls) - { create a helper, insert it automatically when expanding repeaters }
+//-DONE(via ?/+/*): collapse values in repeaters (recursive calls) - { create a helper, insert it automatically when expanding repeaters }
 //-DONE: Calculator example
 //TODO: Collect statistics (expression invocations, live states, recursions count,..)
 //TODO: AST ?1{functor+arglist} ?2{tuple,one of them is NodeType}
@@ -192,6 +192,44 @@ namespace HexTex.Dypa.PEG {
         }
     }
 
+    public class Some : Expression {
+        private Expression item;
+        private int min, max;
+        public Some(Expression item, int min, int max) {
+            this.item = item;
+            this.min = min;
+            this.max = max;
+        }
+        public override Result Match(ICursor cursor) {
+            ParserHelper.Instance.GoDown();
+            try {
+                IVector node = ParserHelper.VectorFactory.Empty;
+                while (max < 0 || node.Length < max) {
+                    Result r = item.Match(cursor);
+                    if (r == null) {
+                        if (node.Length < min) return null;
+                        return new Result(cursor, BNodeVectorFactory.Reverse(node));
+                    }
+                    cursor = r.Cursor;
+                    node = ParserHelper.VectorFactory.InsertBefore(r.Value, node);
+                }
+                return new Result(cursor, BNodeVectorFactory.Reverse(node));
+            } finally {
+                ParserHelper.Instance.GoUp();
+            }
+        }
+        public static Expression ZeroOrMore(Expression item) {
+            return new Some(item, 0, -1);
+        }
+        public static Expression OneOrMore(Expression item) {
+            return new Some(item, 1, -1);
+        }
+        public static Expression Optional(Expression item) {
+            return new Some(item, 0, 1);
+        }
+
+    }
+
     public abstract class Handler : Expression {
         private Expression expr;
         public Handler(Expression expr) {
@@ -257,8 +295,9 @@ namespace HexTex.Dypa.PEG {
     public class CollapseToString : Handler {
         public CollapseToString(Expression expr) : base(expr) { }
         protected override object ProcessValue(object value) {
-            //object[] a = (object[])value;
             IVector a = (IVector)value;
+            if (a.Length == 0) return string.Empty;
+            if (a.Length == 1) return Convert.ToString(a[0]);
             return string.Concat(a[0], a[1]);
         }
     }
@@ -278,6 +317,17 @@ namespace HexTex.Dypa.PEG {
         }
         protected override object ProcessValue(object value) {
             return ((IVector)value)[position];            
+        }
+    }
+
+
+    public class ExtractFirstOrSelf : Handler {
+        public ExtractFirstOrSelf(Expression expr)
+            : base(expr) { }
+        protected override object ProcessValue(object value) {
+            IVector v = (IVector)value;
+            if (v.Length == 0) return v;
+            return v[0];
         }
     }
 

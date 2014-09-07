@@ -74,6 +74,9 @@ namespace HexTex.Data.Common {
         private static BNodeNil instance = new BNodeNil();
         public static BNodeNil Instance { get { return instance; } }
         private BNodeNil() { }
+        public override string ToString() {
+            return LispPrinter.ToString(this);
+        }
 
         #region IVector Members
 
