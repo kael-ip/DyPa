@@ -152,7 +152,7 @@ namespace HexTex.Dypa.PEG {
             ParserHelper.UseArray(false);//Use BNodeVectorFactory
             TestCalc1();
         }
-        //[Test]
+        //[Test]//used by TestCalc1A and TestCalc1B
         public void TestCalc1() {
             /*
                 Expression ← Term ((‘+’ / ‘-’) Term)*
@@ -252,7 +252,7 @@ namespace HexTex.Dypa.PEG {
             ParserHelper.UseArray(false);//Use BNodeVectorFactory
             TestCalc2();
         }
-        //[Test]
+        [Test]
         public void TestCalc2() {
             /*
                 E ← T ((‘+’ / ‘-’) T)*
