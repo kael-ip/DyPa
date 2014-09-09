@@ -487,7 +487,9 @@ namespace HexTex.Dypa.PEG {
                 Result r = parser.Run();
                 //Assert.IsNull(r);
                 Assert.AreNotEqual(TextCursor.EOI, r.Cursor.Peek());
-                //Console.WriteLine(parser.GetError());
+                if (System.Diagnostics.Debugger.IsAttached) {
+                    System.Diagnostics.Debug.WriteLine(parser.GetError());
+                }
                 Assert.AreEqual(6, parser.FailCursor.Position);
             }
             {
@@ -495,7 +497,9 @@ namespace HexTex.Dypa.PEG {
                 Result r = parser.Run();
                 //Assert.IsNull(r);
                 Assert.AreNotEqual(TextCursor.EOI, r.Cursor.Peek());
-                //Console.WriteLine(parser.GetError());
+                if (System.Diagnostics.Debugger.IsAttached) {
+                    System.Diagnostics.Debug.WriteLine(parser.GetError());
+                }
                 Assert.AreEqual(22, parser.FailCursor.Position);
             }
             {
@@ -503,7 +507,9 @@ namespace HexTex.Dypa.PEG {
                 Result r = parser.Run();
                 Assert.IsNull(r);
                 //Assert.AreNotEqual(TextCursor.EOI, r.Cursor.Peek());
-                //Console.WriteLine(parser.GetError());
+                if (System.Diagnostics.Debugger.IsAttached) {
+                    System.Diagnostics.Debug.WriteLine(parser.GetError());
+                }
                 Assert.AreEqual(24, parser.FailCursor.Position);
             }
         }
@@ -558,7 +564,9 @@ namespace HexTex.Dypa.PEG {
                 Result r = parser.Run();
                 Assert.IsNotNull(r);
                 Assert.AreNotEqual(TextCursor.EOI, r.Cursor.Peek());
-                //Console.WriteLine(parser.GetError());
+                if (System.Diagnostics.Debugger.IsAttached) {
+                    System.Diagnostics.Debug.WriteLine(parser.GetError());
+                }
                 Assert.AreEqual(6, parser.FailCursor.Position);
             }
             {
@@ -566,14 +574,18 @@ namespace HexTex.Dypa.PEG {
                 Result r = parser.Run();
                 Assert.IsNotNull(r);
                 Assert.AreNotEqual(TextCursor.EOI, r.Cursor.Peek());
-                //Console.WriteLine(parser.GetError());
+                if (System.Diagnostics.Debugger.IsAttached) {
+                    System.Diagnostics.Debug.WriteLine(parser.GetError());
+                }
                 Assert.AreEqual(22, parser.FailCursor.Position);
             }
             {
                 var parser = new Parser(expr, TextCursor.Create("(12+3*45+(6+7*(6+2)*9+0)"));
                 Result r = parser.Run();
                 Assert.IsNull(r);
-                //Console.WriteLine(parser.GetError());
+                if (System.Diagnostics.Debugger.IsAttached) {
+                    System.Diagnostics.Debug.WriteLine(parser.GetError());
+                }
                 Assert.AreEqual(24, parser.FailCursor.Position);
             }
         }
