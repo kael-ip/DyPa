@@ -91,7 +91,7 @@ namespace HexTex.Dypa.PEG {
         [Test]
         public void TestFirstOf() {
             {
-                var q = new First(new LiteralChar("a"), new LiteralChar("+-"), new LiteralChar("z"));
+                var q = new FirstOf(new LiteralChar("a"), new LiteralChar("+-"), new LiteralChar("z"));
                 {
                     var r = q.Match(TextCursor.Create(""));
                     Assert.IsNull(r);
@@ -116,7 +116,7 @@ namespace HexTex.Dypa.PEG {
         [Test]
         public void TestComposition() {
             {
-                var q = new First(
+                var q = new FirstOf(
                     new Sequence(new LiteralChar("a"), new LiteralChar("+-"), new LiteralChar("z")),
                     new Sequence(new LiteralChar("a"), new LiteralChar("z")),
                     new LiteralChar("?")
@@ -167,7 +167,7 @@ namespace HexTex.Dypa.PEG {
         public void TestRecursion() {
             {
                 Placeholder expr = new Placeholder();
-                expr.Expression = new First(
+                expr.Expression = new FirstOf(
                     new Sequence(new Literal('1'), expr),
                     new Literal('0')
                     );
@@ -244,7 +244,7 @@ namespace HexTex.Dypa.PEG {
              */
             Placeholder expr = new Placeholder();
             Placeholder term = new Placeholder();
-            expr.Expression = new First(
+            expr.Expression = new FirstOf(
                 new Sequence(term, new Literal('+'), expr),
                 term);
             //--left recursive
@@ -254,13 +254,13 @@ namespace HexTex.Dypa.PEG {
             //    new First(new Literal('1'), new Literal('2')));
             //--replaced:
             Placeholder term_r = new Placeholder();
-            term.Expression = new Sequence(new First(
+            term.Expression = new Sequence(new FirstOf(
                 new Sequence(new Literal('('), expr, new Literal(')')),
-                new First(new Literal('1'), new Literal('2'))),
+                new FirstOf(new Literal('1'), new Literal('2'))),
                 term_r);
-            term_r.Expression = new First(
+            term_r.Expression = new FirstOf(
                 new Sequence(new Literal('!'), term_r),
-                new EmptyExpression(null));
+                new EmptyRule(null));
 
             {
                 Result r = expr.Match(TextCursor.Create("1+2"));
@@ -273,71 +273,6 @@ namespace HexTex.Dypa.PEG {
                 Assert.AreEqual(TextCursor.EOI, r.Cursor.Peek());
             }
         }
-
-        //[Ignore("Right recursion")]
-        //[Test]
-        //public void ShiftReduceConflictTest() {
-        //    /*
-        //     stmt:
-        //       expr
-        //     | if_stmt
-        //     ;
-             
-        //     if_stmt:
-        //       IF expr THEN stmt
-        //     | IF expr THEN stmt ELSE stmt
-        //     ;
-             
-        //     expr:
-        //       variable
-        //     ;             
-        //     *
-        //     * Since the parser prefers to shift the ELSE, the result is to attach the else-clause to the innermost if-statement, making these two inputs equivalent:
-        //     *      if x then if y then win (); else lose;
-        //     *      if x then do; if y then win (); else lose; end;
-        //     * But if the parser chose to reduce when possible rather than shift, the result would be to attach the else-clause to the outermost if-statement, making these two inputs equivalent:
-        //     *      if x then if y then win (); else lose;
-        //     *      if x then do; if y then win (); end; else lose;
-        //     */
-        //    Rule[] grammar = new Rule[]{
-        //        new Rule("expr", new object[] { "x" }, new RuleAction(Dumper)),
-        //        new Rule("expr", new object[] { "y" }, new RuleAction(Dumper)),
-        //        new Rule("expr", new object[] { "z" }, new RuleAction(Dumper)),
-        //        new Rule("expr", new object[] { "w" }, new RuleAction(Dumper)),
-        //        new Rule("stmt", new object[] { "expr" }, new RuleAction(Dumper)),
-        //        new Rule("stmt", new object[] { "if_stmt" }, new RuleAction(Dumper)),
-        //        new Rule("if_stmt", new object[] { "IF", "expr", "THEN", "stmt" }, new RuleAction(Dumper)),
-        //        new Rule("if_stmt", new object[] { "IF", "expr", "THEN", "stmt", "ELSE", "stmt" }, new RuleAction(Dumper))
-        //    };
-        //    StringBuilder sb = new StringBuilder();
-        //    ParserGenerator gen = new ParserGenerator(grammar, "stmt");
-        //    gen.Generate();
-
-        //    object[] in1 = new object[] { "IF", "x", "THEN", "IF", "y", "THEN", "z", "ELSE", "w" };
-        //    bool result = new LRParser(gen.RootState, new SampleChain(in1), sb).Parse();
-        //    Assert.IsTrue(result);
-        //    Assert.AreEqual("term term expr ", sb.ToString());
-        //}
-
-        //[Test]
-        //public void TestLR0() {
-        //    Rule[] grammar = new Rule[]{
-        //        new Rule("expr", new object[] { "expr", "*", "rest" }, new RuleAction(Dumper)),
-        //        new Rule("expr", new object[] { "expr", "+", "rest" }, new RuleAction(Dumper)),
-        //        new Rule("expr", new object[] { "rest" }, new RuleAction(Dumper)),
-        //        new Rule("rest", new object[] { "X" }, new RuleAction(Dumper)),
-        //        new Rule("rest", new object[] { "Y" }, new RuleAction(Dumper)),
-        //    };
-        //    ParserGenerator gen = new ParserGenerator(grammar, "expr");
-        //    gen.Generate();
-        //    Console.WriteLine("TestLR0");
-        //    Console.WriteLine(gen.DumpStates());
-
-        //    StringBuilder sb = new StringBuilder();
-        //    object[] in1 = new object[] { "X", "+", "Y", "*", "X" };
-        //    Assert.IsTrue(new LRParser(gen.RootState, new SampleChain(in1), sb).Parse());
-        //    Assert.AreEqual("rest expr rest expr rest expr ", sb.ToString());
-        //}
 
         [Test]
         public void TestCalc1A() {
@@ -358,24 +293,24 @@ namespace HexTex.Dypa.PEG {
                 Factor ← Number / '(' Expression ')'
                 Number ← [0-9]+
              */
-            Expression eDigit = new LiteralChar("0123456789");
+            Rule eDigit = new LiteralChar("0123456789");
             Placeholder eNumber = new Placeholder();
             //eNumber.Expression = new First(new CallbackHandler( new Sequence(eDigit, eNumber), delegate(object v){
             //    object[] a = (object[])v;
             //    return string.Concat(a[0], a[1]);
             //}), eDigit);
-            eNumber.Expression = new First(new CollapseToString(new Sequence(eDigit, eNumber)), new CallbackHandler(eDigit, Convert.ToString));
+            eNumber.Expression = new FirstOf(new CollapseToString(new Sequence(eDigit, eNumber)), new CallbackHandler(eDigit, Convert.ToString));
             //eNumber.Expression = new CallbackHandler(
             //    new First(new CollapseToString(new Sequence(eDigit, eNumber)), new CallbackHandler(eDigit, Convert.ToString)),
             //    delegate(object v) { return Int64.Parse((string)v); });
             //eNumber.Expression = new CollapseToArray(new First(new Sequence(eDigit, eNumber), new Sequence(eDigit, new TailStub())));
             Placeholder eAdditive = new Placeholder();
             Placeholder eMultiplicative = new Placeholder();
-            Expression eSingular = new First(eNumber,
+            Rule eSingular = new FirstOf(eNumber,
                 new ExtractOne(1, new Sequence(new Literal('('), eAdditive, new Literal(')'))));
             //
             Placeholder eAdditiveSuffix = new Placeholder();
-            eAdditiveSuffix.Expression = new First(
+            eAdditiveSuffix.Expression = new FirstOf(
                 new CallbackHandler(new Sequence(new LiteralChar("+-"), eMultiplicative, eAdditiveSuffix), delegate(object v) {
                     IVector a = (IVector)v;
                     IVector tail = (IVector)a[2];
@@ -384,7 +319,7 @@ namespace HexTex.Dypa.PEG {
                 //return ((object[])v)[1];
             }),
                 //new EmptyExpression(null));
-                new EmptyExpression(ParserHelper.VectorFactory.Empty));
+                new EmptyRule(ParserHelper.VectorFactory.Empty));
             //eAdditive.Expression = new CallbackHandler( new Sequence(eMultiplicative, eAdditiveSuffix), DoAdd);
             eAdditive.Expression = new CallbackHandler(new Sequence(eMultiplicative, eAdditiveSuffix), delegate(object v) {
                 IVector a = (IVector)v;
@@ -392,7 +327,7 @@ namespace HexTex.Dypa.PEG {
                 return ParserHelper.VectorFactory.InsertBefore(a[0], tail);
             });
             Placeholder eMultiplicativeSuffix = new Placeholder();
-            eMultiplicativeSuffix.Expression = new First(
+            eMultiplicativeSuffix.Expression = new FirstOf(
                 new CallbackHandler(new Sequence(new LiteralChar("*/"), eSingular, eMultiplicativeSuffix), delegate(object v) {
                     IVector a = (IVector)v;
                     IVector tail = (IVector)a[2];
@@ -401,7 +336,7 @@ namespace HexTex.Dypa.PEG {
                 //return ((object[])v)[1];
             }),
                 //new EmptyExpression(null));
-                new EmptyExpression(ParserHelper.VectorFactory.Empty));
+                new EmptyRule(ParserHelper.VectorFactory.Empty));
             //eMultiplicative.Expression = new CallbackHandler(new Sequence(eSingular, eMultiplicativeSuffix), DoMultiply);
             eMultiplicative.Expression = new CallbackHandler(new Sequence(eSingular, eMultiplicativeSuffix), delegate(object v) {
                 IVector a = (IVector)v;
@@ -409,7 +344,7 @@ namespace HexTex.Dypa.PEG {
                 if (tail == ParserHelper.VectorFactory.Empty) return a[0];
                 return ParserHelper.VectorFactory.InsertBefore(a[0], tail);
             });
-            Expression expr = eAdditive;
+            Rule expr = eAdditive;
 
             {                
                 //Result r = expr.Match(TextCursor.Create("12+345+6+7890"));
@@ -458,24 +393,24 @@ namespace HexTex.Dypa.PEG {
                 F ← N / '(' E ')'
                 N ← [0-9]+
              */
-            Expression eDigit = new LiteralChar("0123456789");
+            Rule eDigit = new LiteralChar("0123456789");
             Placeholder eNumber = new Placeholder();
-            eNumber.Expression = new First(new CollapseToString(new Sequence(eDigit, eNumber)), new CallbackHandler(eDigit, Convert.ToString));
+            eNumber.Expression = new FirstOf(new CollapseToString(new Sequence(eDigit, eNumber)), new CallbackHandler(eDigit, Convert.ToString));
             Placeholder eAdditive = new Placeholder();
             Placeholder eMultiplicative = new Placeholder();
-            Expression eSingular = new First(eNumber, new ExtractOne(1, new Sequence(new Literal('('), eAdditive, new Literal(')'))));
+            Rule eSingular = new FirstOf(eNumber, new ExtractOne(1, new Sequence(new Literal('('), eAdditive, new Literal(')'))));
             //
             Placeholder eAdditiveSuffix = new Placeholder();
-            eAdditiveSuffix.Expression = new First(
+            eAdditiveSuffix.Expression = new FirstOf(
                 new Sequence(new LiteralChar("+-"), eMultiplicative, eAdditiveSuffix),
-                new EmptyExpression(ParserHelper.VectorFactory.Empty));
+                new EmptyRule(ParserHelper.VectorFactory.Empty));
             eAdditive.Expression = new CallbackHandler(new Sequence(eMultiplicative, eAdditiveSuffix), BinaryInfixToPrefix);
             Placeholder eMultiplicativeSuffix = new Placeholder();
-            eMultiplicativeSuffix.Expression = new First(
+            eMultiplicativeSuffix.Expression = new FirstOf(
                 new Sequence(new LiteralChar("*/"), eSingular, eMultiplicativeSuffix),
-                new EmptyExpression(ParserHelper.VectorFactory.Empty));
+                new EmptyRule(ParserHelper.VectorFactory.Empty));
             eMultiplicative.Expression = new CallbackHandler(new Sequence(eSingular, eMultiplicativeSuffix), BinaryInfixToPrefix);
-            Expression expr = eAdditive;
+            Rule expr = eAdditive;
 
             {
                 Result r = expr.Match(TextCursor.Create("12+3*45+6+7*(6+2)*9+0"));
@@ -525,7 +460,7 @@ namespace HexTex.Dypa.PEG {
             var factor = new Placeholder();
             var term = new Placeholder();
             var expr = new Placeholder();
-            factor.Expression = new First(eNumber, new ExtractOne(1, new Sequence(new Literal('('), expr, new Literal(')'))));
+            factor.Expression = new FirstOf(eNumber, new ExtractOne(1, new Sequence(new Literal('('), expr, new Literal(')'))));
             Function toPrefix = z => {
                     IVector v = (IVector)z;
                     object v0 = v[0];

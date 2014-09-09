@@ -84,13 +84,13 @@ namespace HexTex.Dypa.PEG {
         public object Value { get { return value; } }
     }
 
-    public abstract class Expression {
+    public abstract class Rule {
         public abstract Result Match(ICursor cursor);
     }
 
-    public class EmptyExpression : Expression {
+    public class EmptyRule : Rule {
         private object value;
-        public EmptyExpression(object value) {
+        public EmptyRule(object value) {
             this.value = value;
         }
         public override Result Match(ICursor cursor) {
@@ -98,10 +98,10 @@ namespace HexTex.Dypa.PEG {
         }
     }
 
-    public class Placeholder : Expression {
-        private Expression expr;
+    public class Placeholder : Rule {
+        private Rule expr;
         public Placeholder() { }
-        public Expression Expression { get { return expr; } set { expr = value; } }
+        public Rule Expression { get { return expr; } set { expr = value; } }
         public override Result Match(ICursor cursor) {
             ParserHelper.Instance.GoDown();
             Result r = expr.Match(cursor);
@@ -110,7 +110,7 @@ namespace HexTex.Dypa.PEG {
         }
     }
 
-    public class Literal : Expression {
+    public class Literal : Rule {
         private object item;
         public Literal(object item) {
             this.item = item;
@@ -123,7 +123,7 @@ namespace HexTex.Dypa.PEG {
             return null;
         }
     }
-    public class LiteralChar : Expression {
+    public class LiteralChar : Rule {
         private string chars;
         public LiteralChar(string chars) {
             this.chars = chars;
@@ -136,9 +136,9 @@ namespace HexTex.Dypa.PEG {
         }
     }
 
-    public class Sequence : Expression {
-        private Expression[] items;
-        public Sequence(params Expression[] items) {
+    public class Sequence : Rule {
+        private Rule[] items;
+        public Sequence(params Rule[] items) {
             this.items = items;
         }
         public override Result Match(ICursor cursor) {
@@ -173,9 +173,9 @@ namespace HexTex.Dypa.PEG {
         }
     }
 
-    public class First : Expression {
-        private Expression[] items;
-        public First(params Expression[] items) {
+    public class FirstOf : Rule {
+        private Rule[] items;
+        public FirstOf(params Rule[] items) {
             this.items = items;
         }
         public override Result Match(ICursor cursor) {
@@ -192,10 +192,10 @@ namespace HexTex.Dypa.PEG {
         }
     }
 
-    public class Some : Expression {
-        private Expression item;
+    public class Some : Rule {
+        private Rule item;
         private int min, max;
-        public Some(Expression item, int min, int max) {
+        public Some(Rule item, int min, int max) {
             this.item = item;
             this.min = min;
             this.max = max;
@@ -218,21 +218,21 @@ namespace HexTex.Dypa.PEG {
                 ParserHelper.Instance.GoUp();
             }
         }
-        public static Expression ZeroOrMore(Expression item) {
+        public static Rule ZeroOrMore(Rule item) {
             return new Some(item, 0, -1);
         }
-        public static Expression OneOrMore(Expression item) {
+        public static Rule OneOrMore(Rule item) {
             return new Some(item, 1, -1);
         }
-        public static Expression Optional(Expression item) {
+        public static Rule Optional(Rule item) {
             return new Some(item, 0, 1);
         }
 
     }
 
-    public abstract class Handler : Expression {
-        private Expression expr;
-        public Handler(Expression expr) {
+    public abstract class Handler : Rule {
+        private Rule expr;
+        public Handler(Rule expr) {
             this.expr = expr;
         }
         public override Result Match(ICursor cursor) {
@@ -252,7 +252,7 @@ namespace HexTex.Dypa.PEG {
 
     public class CallbackHandler : Handler {
         private Function callback;
-        public CallbackHandler(Expression expr, Function f)
+        public CallbackHandler(Rule expr, Function f)
             : base(expr) {
             this.callback = f;
         }
@@ -262,7 +262,7 @@ namespace HexTex.Dypa.PEG {
     }
 
     internal class TestHandler : Handler {
-        public TestHandler(Expression expr) : base(expr) { }
+        public TestHandler(Rule expr) : base(expr) { }
         protected override object ProcessValue(object value) {
             return value;
         }
@@ -278,7 +278,7 @@ namespace HexTex.Dypa.PEG {
 
     // expr = Sequence(item, accumulator)
     public class CollapseToArray : Handler {
-        public CollapseToArray(Expression expr) : base(expr) { }
+        public CollapseToArray(Rule expr) : base(expr) { }
         protected override object ProcessValue(object value) {
             object[] a = (object[])value;
             if (a[1] == null) return new object[] { a[0] };
@@ -293,7 +293,7 @@ namespace HexTex.Dypa.PEG {
 
     // expr = Sequence(item, string)
     public class CollapseToString : Handler {
-        public CollapseToString(Expression expr) : base(expr) { }
+        public CollapseToString(Rule expr) : base(expr) { }
         protected override object ProcessValue(object value) {
             IVector a = (IVector)value;
             if (a.Length == 0) return string.Empty;
@@ -302,7 +302,7 @@ namespace HexTex.Dypa.PEG {
         }
     }
 
-    public class TailStub : Expression {
+    public class TailStub : Rule {
         static object[] stub = new object[0];
         public override Result Match(ICursor cursor) {
             return new Result(cursor, stub);
@@ -311,7 +311,7 @@ namespace HexTex.Dypa.PEG {
 
     public class ExtractOne : Handler {
         private int position;
-        public ExtractOne(int position, Expression expr)
+        public ExtractOne(int position, Rule expr)
             : base(expr) {
             this.position = position;
         }
@@ -322,7 +322,7 @@ namespace HexTex.Dypa.PEG {
 
 
     public class ExtractFirstOrSelf : Handler {
-        public ExtractFirstOrSelf(Expression expr)
+        public ExtractFirstOrSelf(Rule expr)
             : base(expr) { }
         protected override object ProcessValue(object value) {
             IVector v = (IVector)value;
@@ -345,7 +345,7 @@ namespace HexTex.Dypa.PEG {
         private int maxDepth;
         private int failDepth;
         private ICursor failCursor;
-        private Expression failExpression;
+        private Rule failExpression;
 
         public int Depth { get { return depth; } }
         public int MaxDepth { get { return maxDepth; } }
@@ -363,11 +363,23 @@ namespace HexTex.Dypa.PEG {
         internal void GoUp() {
             depth--;
         }
-        internal void RememberFail(ICursor cursor, Expression expr) {
+        internal void RememberFail(ICursor cursor, Rule expr) {
             if (failCursor != null && failCursor.Position > cursor.Position) return;
             failDepth = depth;
             failCursor = cursor;
             failExpression = expr;
+        }
+    }
+
+    public class Parser {
+        private Rule rule;
+        private ICursor cursor;
+        public Parser(Rule rule, ICursor cursor) {
+            this.rule = rule;
+            this.cursor = cursor;
+        }
+        public object Run() {
+            return rule.Match(cursor);
         }
     }
 
