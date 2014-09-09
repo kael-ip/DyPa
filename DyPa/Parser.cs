@@ -17,7 +17,7 @@
 //TODO: Collect statistics (expression invocations, live states, recursions count,..)
 //TODO: AST ?1{functor+arglist} ?2{tuple,one of them is NodeType}
 //TODO: ?make expression values optional
-//TODO: redesign parser to use no static switches and error helpers
+//-DONE: redesign parser to use no static switches and error helpers
 
 using System.Collections.Generic;
 using System;
@@ -85,7 +85,7 @@ namespace HexTex.Dypa.PEG {
     }
 
     public abstract class Rule {
-        public abstract Result Match(ICursor cursor);
+        public abstract Result Match(Parser parser, ICursor cursor);
     }
 
     public class EmptyRule : Rule {
@@ -93,7 +93,7 @@ namespace HexTex.Dypa.PEG {
         public EmptyRule(object value) {
             this.value = value;
         }
-        public override Result Match(ICursor cursor) {
+        public override Result Match(Parser parser, ICursor cursor) {
             return new Result(cursor, value);
         }
     }
@@ -102,10 +102,10 @@ namespace HexTex.Dypa.PEG {
         private Rule expr;
         public Placeholder() { }
         public Rule Expression { get { return expr; } set { expr = value; } }
-        public override Result Match(ICursor cursor) {
-            ParserHelper.Instance.GoDown();
-            Result r = expr.Match(cursor);
-            ParserHelper.Instance.GoUp();
+        public override Result Match(Parser parser, ICursor cursor) {
+            parser.GoDown();
+            Result r = expr.Match(parser, cursor);
+            parser.GoUp();
             return r;
         }
     }
@@ -115,11 +115,11 @@ namespace HexTex.Dypa.PEG {
         public Literal(object item) {
             this.item = item;
         }
-        public override Result Match(ICursor cursor) {
+        public override Result Match(Parser parser, ICursor cursor) {
             if (Equals(cursor.Peek(), item)) {
                 return new Result(cursor.Pop(), item);
             }
-            ParserHelper.Instance.RememberFail(cursor, this);
+            parser.RememberFail(cursor, this);
             return null;
         }
     }
@@ -128,10 +128,10 @@ namespace HexTex.Dypa.PEG {
         public LiteralChar(string chars) {
             this.chars = chars;
         }
-        public override Result Match(ICursor cursor) {
+        public override Result Match(Parser parser, ICursor cursor) {
             object c = cursor.Peek();
-            if (!typeof(char).IsInstanceOfType(c)) { ParserHelper.Instance.RememberFail(cursor, this); return null; }
-            if (chars.IndexOf((char)c) < 0) { ParserHelper.Instance.RememberFail(cursor, this); return null; }
+            if (!typeof(char).IsInstanceOfType(c)) { parser.RememberFail(cursor, this); return null; }
+            if (chars.IndexOf((char)c) < 0) { parser.RememberFail(cursor, this); return null; }
             return new Result(cursor.Pop(), c);
         }
     }
@@ -141,35 +141,35 @@ namespace HexTex.Dypa.PEG {
         public Sequence(params Rule[] items) {
             this.items = items;
         }
-        public override Result Match(ICursor cursor) {
-            ParserHelper.Instance.GoDown();
+        public override Result Match(Parser parser, ICursor cursor) {
+            parser.GoDown();
             Result r;
-            if (ParserHelper.VectorFactory is ArrayVectorFactory)
-                r = MatchImpl1(cursor);
+            if (parser.VectorFactory is ArrayVectorFactory)
+                r = MatchImpl1(parser, cursor);
             else
-                r = MatchImpl2(cursor);
-            ParserHelper.Instance.GoUp();
+                r = MatchImpl2(parser, cursor);
+            parser.GoUp();
             return r;
         }
-        private Result MatchImpl1(ICursor cursor) {
+        private Result MatchImpl1(Parser parser, ICursor cursor) {
             object[] values = new object[items.Length];
             for (int i = 0; i < items.Length; i++) {
-                Result r = items[i].Match(cursor);
+                Result r = items[i].Match(parser, cursor);
                 if (r == null) return null;
                 cursor = r.Cursor;
                 values[i] = r.Value;
             }
-            return new Result(cursor, ParserHelper.VectorFactory.Create(values));
+            return new Result(cursor, parser.VectorFactory.Create(values));
         }
-        private Result MatchImpl2(ICursor cursor) {
-            IVector node = ParserHelper.VectorFactory.Empty;
+        private Result MatchImpl2(Parser parser, ICursor cursor) {
+            IVector node = parser.VectorFactory.Empty;
             for (int i = 0; i < items.Length; i++) {
-                Result r = items[i].Match(cursor);
+                Result r = items[i].Match(parser, cursor);
                 if (r == null) return null;
                 cursor = r.Cursor;
-                node = ParserHelper.VectorFactory.InsertBefore(r.Value, node);
+                node = parser.VectorFactory.InsertBefore(r.Value, node);
             }
-            return new Result(cursor, BNodeVectorFactory.Reverse(node));
+            return new Result(cursor, parser.VectorFactory.Reverse(node));
         }
     }
 
@@ -178,16 +178,16 @@ namespace HexTex.Dypa.PEG {
         public FirstOf(params Rule[] items) {
             this.items = items;
         }
-        public override Result Match(ICursor cursor) {
-            ParserHelper.Instance.GoDown();
+        public override Result Match(Parser parser, ICursor cursor) {
+            parser.GoDown();
             try {
                 for (int i = 0; i < items.Length; i++) {
-                    Result r = items[i].Match(cursor);
+                    Result r = items[i].Match(parser, cursor);
                     if (r != null) return r;
                 }
                 return null;
             } finally {
-                ParserHelper.Instance.GoUp();
+                parser.GoUp();
             }
         }
     }
@@ -200,22 +200,22 @@ namespace HexTex.Dypa.PEG {
             this.min = min;
             this.max = max;
         }
-        public override Result Match(ICursor cursor) {
-            ParserHelper.Instance.GoDown();
+        public override Result Match(Parser parser, ICursor cursor) {
+            parser.GoDown();
             try {
-                IVector node = ParserHelper.VectorFactory.Empty;
+                IVector node = parser.VectorFactory.Empty;
                 while (max < 0 || node.Length < max) {
-                    Result r = item.Match(cursor);
+                    Result r = item.Match(parser, cursor);
                     if (r == null) {
                         if (node.Length < min) return null;
-                        return new Result(cursor, BNodeVectorFactory.Reverse(node));
+                        return new Result(cursor, parser.VectorFactory.Reverse(node));
                     }
                     cursor = r.Cursor;
-                    node = ParserHelper.VectorFactory.InsertBefore(r.Value, node);
+                    node = parser.VectorFactory.InsertBefore(r.Value, node);
                 }
-                return new Result(cursor, BNodeVectorFactory.Reverse(node));
+                return new Result(cursor, parser.VectorFactory.Reverse(node));
             } finally {
-                ParserHelper.Instance.GoUp();
+                parser.GoUp();
             }
         }
         public static Rule ZeroOrMore(Rule item) {
@@ -235,14 +235,14 @@ namespace HexTex.Dypa.PEG {
         public Handler(Rule expr) {
             this.expr = expr;
         }
-        public override Result Match(ICursor cursor) {
-            ParserHelper.Instance.GoDown();
+        public override Result Match(Parser parser, ICursor cursor) {
+            parser.GoDown();
             try {
-                Result r = expr.Match(cursor);
+                Result r = expr.Match(parser, cursor);
                 if (r != null) return new Result(r.Cursor, ProcessValue(r.Value));
                 return null;
             } finally {
-                ParserHelper.Instance.GoUp();
+                parser.GoUp();
             }
         }
         protected abstract object ProcessValue(object value);
@@ -304,7 +304,7 @@ namespace HexTex.Dypa.PEG {
 
     public class TailStub : Rule {
         static object[] stub = new object[0];
-        public override Result Match(ICursor cursor) {
+        public override Result Match(Parser parser, ICursor cursor) {
             return new Result(cursor, stub);
         }
     }
@@ -331,16 +331,12 @@ namespace HexTex.Dypa.PEG {
         }
     }
 
-    public class ParserHelper {
-        public static ParserHelper Instance;
-        static ParserHelper() { Instance = new ParserHelper(); }
+    public class Parser {
+        private IVectorFactory factory = new ArrayVectorFactory();
+        public IVectorFactory VectorFactory { get { return factory; } }
 
-        private static IVectorFactory factory = new ArrayVectorFactory();
-        public static IVectorFactory VectorFactory { get { return factory; } }
-        public static void UseArray(bool v) {
-            factory = v ? (IVectorFactory)new ArrayVectorFactory() : (IVectorFactory)new BNodeVectorFactory();
-        }
-
+        protected Rule rule;
+        protected ICursor cursor;
         private int depth;
         private int maxDepth;
         private int failDepth;
@@ -356,61 +352,26 @@ namespace HexTex.Dypa.PEG {
             if (Equals(TextCursor.EOI, unexpected)) unexpected = "{EOI}";
             return string.Format("Syntax error at {0} (unexpected '{1}')", failCursor.Position, unexpected);
         }
-        internal void GoDown() {
+        public void GoDown() {
             depth++;
             maxDepth = Math.Max(maxDepth, depth);
         }
-        internal void GoUp() {
+        public void GoUp() {
             depth--;
         }
-        internal void RememberFail(ICursor cursor, Rule expr) {
+        public void RememberFail(ICursor cursor, Rule expr) {
             if (failCursor != null && failCursor.Position > cursor.Position) return;
             failDepth = depth;
             failCursor = cursor;
             failExpression = expr;
         }
-    }
-
-    public class Parser {
-        private Rule rule;
-        private ICursor cursor;
         public Parser(Rule rule, ICursor cursor) {
             this.rule = rule;
             this.cursor = cursor;
         }
-        public object Run() {
-            return rule.Match(cursor);
+        public Result Run() {
+            return rule.Match(this, cursor);
         }
     }
-
-    //
-    // AST
-    //
-
-    public interface IASTFactory {
-        object CreateNode(object type, params object[] items);
-    }
-
-    //public class BNodeFactory : IASTFactory {
-    //    //public object Create(object head, object tail) { return new BNode(head, tail); }
-
-    //    #region IASTFactory Members
-
-    //    object IASTFactory.CreateNode(object type, params object[] items) {
-    //        throw new NotImplementedException();
-    //    }
-
-    //    #endregion
-    //}
-
-    //public class ArrayNodeFactory : IASTFactory {
-    //    #region IASTFactory Members
-
-    //    object IASTFactory.CreateNode(object type, params object[] items) {
-    //        throw new NotImplementedException();
-    //    }
-
-    //    #endregion
-    //}
 
 }

@@ -16,6 +16,7 @@ namespace HexTex.Data.Common {
         IVector Empty { get; }
         IVector Create(params object[] values);
         IVector InsertBefore(object o, IVector v);
+        IVector Reverse(IVector v);
     }
 
     #region ArrayVector
@@ -44,10 +45,6 @@ namespace HexTex.Data.Common {
     }
 
     public class ArrayVectorFactory : IVectorFactory {
-
-        //private static IVectorFactory instance = new ArrayVectorFactory();
-        //public static IVectorFactory Instance { get { return instance; } }
-
         private Vector empty = new Vector(new object[0]);
 
         #region IVectorFactory Members
@@ -61,6 +58,14 @@ namespace HexTex.Data.Common {
         }
         public IVector Create(params object[] values) {
             return new Vector(values);
+        }
+        public IVector Reverse(IVector v) {
+            if(v.Length == 0) return v;
+            object[] a = new object[v.Length];
+            for (int i = 0; i < a.Length; i++) {
+                a[a.Length - i - 1] = v[i];
+            }
+            return this.Create(a);
         }
 
         #endregion
@@ -113,10 +118,7 @@ namespace HexTex.Data.Common {
 
     public class BNodeVectorFactory : IVectorFactory {
 
-        //private static BNodeVectorFactory instance = new BNodeVectorFactory();
-        //public static BNodeVectorFactory Instance { get { return instance; } }
-
-        public static object Reverse(object node) {
+        static object Reverse(object node) {
             object rnode = BNodeNil.Instance;
             BNode bnode = node as BNode;
             while (bnode != null) {
@@ -137,6 +139,9 @@ namespace HexTex.Data.Common {
                 node = new BNode(values[i - 1], node);
             }
             return node;
+        }
+        public IVector Reverse(IVector v) {
+            return (IVector)Reverse((object)v);
         }
 
         #endregion

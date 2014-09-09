@@ -11,11 +11,41 @@ namespace HexTex.Dypa.PEG {
     public class RDParserTests {
 
 
-        //public object Dumper(Rule r, object context, IList args) { ((StringBuilder)context).AppendFormat("{0} ", r.Product); return null; }
-
         [SetUp]
         public void SetUp() {
-            ParserHelper.Instance = new ParserHelper();
+        }
+
+        [Test]
+        public void TestVectorReverseA() {
+            TestVectorReverse(true);
+        }
+
+        [Test]
+        public void TestVectorReverseB() {
+            TestVectorReverse(false);
+        }
+
+        public void TestVectorReverse(bool useArray) {
+            IVectorFactory factory = useArray ? (IVectorFactory)new ArrayVectorFactory() : (IVectorFactory)new BNodeVectorFactory();
+            {
+                var v = factory.Create("a", "b", "c", "d");
+                var r = factory.Reverse(v);
+                Assert.AreEqual(4, r.Length);
+                Assert.AreEqual("a", r[3]);
+                Assert.AreEqual("b", r[2]);
+                Assert.AreEqual("c", r[1]);
+                Assert.AreEqual("d", r[0]);
+            }
+            {
+                var v = factory.Create("a", "b", "c", "d", "e");
+                var r = factory.Reverse(v);
+                Assert.AreEqual(5, r.Length);
+                Assert.AreEqual("a", r[4]);
+                Assert.AreEqual("b", r[3]);
+                Assert.AreEqual("c", r[2]);
+                Assert.AreEqual("d", r[1]);
+                Assert.AreEqual("e", r[0]);
+            }
         }
 
         [Test]
@@ -23,13 +53,15 @@ namespace HexTex.Dypa.PEG {
             {
                 var q = new LiteralChar("0123456789");
                 {
-                    var r = q.Match(TextCursor.Create("7"));
+                    var parser = new Parser(q, TextCursor.Create("7"));
+                    var r = parser.Run();
                     Assert.IsNotNull(r);
                     Assert.AreEqual(1, r.Cursor.Position);
                     Assert.AreEqual('7', r.Value);
                 }
                 {
-                    var r = q.Match(TextCursor.Create("78"));
+                    var parser = new Parser(q, TextCursor.Create("78"));
+                    var r = parser.Run();
                     Assert.IsNotNull(r);
                     Assert.AreEqual(1, r.Cursor.Position);
                     Assert.AreEqual('7', r.Value);
@@ -38,17 +70,19 @@ namespace HexTex.Dypa.PEG {
             {
                 var q = new Literal(TextCursor.EOI);
                 {
-                    var r = q.Match(TextCursor.Create(""));
+                    var parser = new Parser(q, TextCursor.Create(""));
+                    var r = parser.Run();
                     Assert.IsNotNull(r);
-                    Assert.IsNull(ParserHelper.Instance.FailCursor);
+                    Assert.IsNull(parser.FailCursor);
                     Assert.AreEqual(0, r.Cursor.Position);
                     Assert.AreEqual(TextCursor.EOI, r.Value);
                 }
                 {
-                    var r = q.Match(TextCursor.Create("0123"));
+                    var parser = new Parser(q, TextCursor.Create("0123"));
+                    var r = parser.Run();
                     Assert.IsNull(r);
-                    Assert.IsNotNull(ParserHelper.Instance.FailCursor);
-                    Assert.AreEqual(0, ParserHelper.Instance.FailCursor.Position);
+                    Assert.IsNotNull(parser.FailCursor);
+                    Assert.AreEqual(0, parser.FailCursor.Position);
                 }
             }
         }
@@ -58,25 +92,29 @@ namespace HexTex.Dypa.PEG {
             {
                 var q = new Sequence(new LiteralChar("abc"), new LiteralChar("+-"), new LiteralChar("def"), new Literal(TextCursor.EOI));
                 {
-                    var r = q.Match(TextCursor.Create(""));
+                    var parser = new Parser(q, TextCursor.Create(""));
+                    var r = parser.Run();
                     Assert.IsNull(r);
-                    Assert.IsNotNull(ParserHelper.Instance.FailCursor);
-                    Assert.AreEqual(0, ParserHelper.Instance.FailCursor.Position);
+                    Assert.IsNotNull(parser.FailCursor);
+                    Assert.AreEqual(0, parser.FailCursor.Position);
                 }
                 {
-                    var r = q.Match(TextCursor.Create("abf"));
+                    var parser = new Parser(q, TextCursor.Create("abf"));
+                    var r = parser.Run();
                     Assert.IsNull(r);
-                    Assert.IsNotNull(ParserHelper.Instance.FailCursor);
-                    Assert.AreEqual(1, ParserHelper.Instance.FailCursor.Position);
+                    Assert.IsNotNull(parser.FailCursor);
+                    Assert.AreEqual(1, parser.FailCursor.Position);
                 }
                 {
-                    var r = q.Match(TextCursor.Create("a+a"));
+                    var parser = new Parser(q, TextCursor.Create("a+a"));
+                    var r = parser.Run();
                     Assert.IsNull(r);
-                    Assert.IsNotNull(ParserHelper.Instance.FailCursor);
-                    Assert.AreEqual(2, ParserHelper.Instance.FailCursor.Position);
+                    Assert.IsNotNull(parser.FailCursor);
+                    Assert.AreEqual(2, parser.FailCursor.Position);
                 }
                 {
-                    var r = q.Match(TextCursor.Create("b-d"));
+                    var parser = new Parser(q, TextCursor.Create("b-d"));
+                    var r = parser.Run();
                     Assert.IsNotNull(r);
                     Assert.AreEqual(3, r.Cursor.Position);
                     var v = r.Value as IVector;
@@ -93,19 +131,22 @@ namespace HexTex.Dypa.PEG {
             {
                 var q = new FirstOf(new LiteralChar("a"), new LiteralChar("+-"), new LiteralChar("z"));
                 {
-                    var r = q.Match(TextCursor.Create(""));
+                    var parser = new Parser(q, TextCursor.Create(""));
+                    var r = parser.Run();
                     Assert.IsNull(r);
-                    Assert.IsNotNull(ParserHelper.Instance.FailCursor);
-                    Assert.AreEqual(0, ParserHelper.Instance.FailCursor.Position);
+                    Assert.IsNotNull(parser.FailCursor);
+                    Assert.AreEqual(0, parser.FailCursor.Position);
                 }
                 {
-                    var r = q.Match(TextCursor.Create("+"));
+                    var parser = new Parser(q, TextCursor.Create("+"));
+                    var r = parser.Run();
                     Assert.IsNotNull(r);
                     Assert.AreEqual(1, r.Cursor.Position);
                     Assert.AreEqual('+', r.Value);
                 }
                 {
-                    var r = q.Match(TextCursor.Create("z"));
+                    var parser = new Parser(q, TextCursor.Create("z"));
+                    var r = parser.Run();
                     Assert.IsNotNull(r);
                     Assert.AreEqual(1, r.Cursor.Position);
                     Assert.AreEqual('z', r.Value);
@@ -122,13 +163,15 @@ namespace HexTex.Dypa.PEG {
                     new LiteralChar("?")
                     );
                 {
-                    var r = q.Match(TextCursor.Create(""));
+                    var parser = new Parser(q, TextCursor.Create(""));
+                    var r = parser.Run();
                     Assert.IsNull(r);
-                    Assert.IsNotNull(ParserHelper.Instance.FailCursor);
-                    Assert.AreEqual(0, ParserHelper.Instance.FailCursor.Position);
+                    Assert.IsNotNull(parser.FailCursor);
+                    Assert.AreEqual(0, parser.FailCursor.Position);
                 }
                 {
-                    var r = q.Match(TextCursor.Create("a+z"));
+                    var parser = new Parser(q, TextCursor.Create("a+z"));
+                    var r = parser.Run();
                     Assert.IsNotNull(r);
                     Assert.AreEqual(3, r.Cursor.Position);
                     var v = r.Value as IVector;
@@ -139,7 +182,8 @@ namespace HexTex.Dypa.PEG {
                     Assert.AreEqual('z', v[2]);
                 }
                 {
-                    var r = q.Match(TextCursor.Create("az"));
+                    var parser = new Parser(q, TextCursor.Create("az"));
+                    var r = parser.Run();
                     Assert.IsNotNull(r);
                     Assert.AreEqual(2, r.Cursor.Position);
                     var v = r.Value as IVector;
@@ -149,16 +193,18 @@ namespace HexTex.Dypa.PEG {
                     Assert.AreEqual('z', v[1]);
                 }
                 {
-                    var r = q.Match(TextCursor.Create("?"));
+                    var parser = new Parser(q, TextCursor.Create("?"));
+                    var r = parser.Run();
                     Assert.IsNotNull(r);
                     Assert.AreEqual(1, r.Cursor.Position);
                     Assert.AreEqual('?', r.Value);
                 }
                 {
-                    var r = q.Match(TextCursor.Create("a?"));
+                    var parser = new Parser(q, TextCursor.Create("a?"));
+                    var r = parser.Run();
                     Assert.IsNull(r);
-                    Assert.IsNotNull(ParserHelper.Instance.FailCursor);
-                    Assert.AreEqual(1, ParserHelper.Instance.FailCursor.Position);
+                    Assert.IsNotNull(parser.FailCursor);
+                    Assert.AreEqual(1, parser.FailCursor.Position);
                 }
             }
         }
@@ -172,7 +218,8 @@ namespace HexTex.Dypa.PEG {
                     new Literal('0')
                     );
                 {
-                    Result r = expr.Match(TextCursor.Create("11110"));
+                    var parser = new Parser(expr, TextCursor.Create("11110"));
+                    Result r = parser.Run();
                     Assert.IsNotNull(r);
                     Assert.AreEqual(TextCursor.EOI, r.Cursor.Peek());
                     Assert.IsTrue(r.Value is IVector);
@@ -186,7 +233,8 @@ namespace HexTex.Dypa.PEG {
                     Assert.AreEqual('0', v[1]);
                 }
                 {
-                    Result r = expr.Match(TextCursor.Create("0"));
+                    var parser = new Parser(expr, TextCursor.Create("0"));
+                    Result r = parser.Run();
                     Assert.IsNotNull(r);
                     Assert.AreEqual(TextCursor.EOI, r.Cursor.Peek());
                     Assert.AreEqual('0', r.Value);
@@ -205,7 +253,8 @@ namespace HexTex.Dypa.PEG {
                     Some.OneOrMore(digit)
                     );
                 {
-                    var r = q.Match(TextCursor.Create("-.52"));
+                    var parser = new Parser(q, TextCursor.Create("-.52"));
+                    var r = parser.Run();
                     Assert.IsNotNull(r);
                     Assert.AreEqual(4, r.Cursor.Position);
                     Assert.IsTrue(r.Value is IVector);
@@ -263,12 +312,14 @@ namespace HexTex.Dypa.PEG {
                 new EmptyRule(null));
 
             {
-                Result r = expr.Match(TextCursor.Create("1+2"));
+                var parser = new Parser(expr, TextCursor.Create("1+2"));
+                Result r = parser.Run();
                 Assert.IsNotNull(r);
                 Assert.AreEqual(TextCursor.EOI, r.Cursor.Peek());
             }
             {
-                Result r = expr.Match(TextCursor.Create("1+2!"));
+                var parser = new Parser(expr, TextCursor.Create("1+2!"));
+                Result r = parser.Run();
                 Assert.IsNotNull(r);
                 Assert.AreEqual(TextCursor.EOI, r.Cursor.Peek());
             }
@@ -277,16 +328,15 @@ namespace HexTex.Dypa.PEG {
         [Test]
         public void TestCalc1A() {
             LispPrinter.PrintVectorsAsLists = true;//required to compare the result
-            ParserHelper.UseArray(true);//Use ArrayVectorFactory
-            TestCalc1();
+            TestCalc1(true);//Use ArrayVectorFactory
         }
         [Test]
         public void TestCalc1B() {
-            ParserHelper.UseArray(false);//Use BNodeVectorFactory
-            TestCalc1();
+            TestCalc1(false);//Use BNodeVectorFactory
         }
         //[Test]//used by TestCalc1A and TestCalc1B
-        public void TestCalc1() {
+        public void TestCalc1(bool useArray) {
+            IVectorFactory factory = useArray? (IVectorFactory)new ArrayVectorFactory() : (IVectorFactory)new BNodeVectorFactory();
             /*
                 Expression ← Term ((‘+’ / ‘-’) Term)*
                 Term ← Factor (('*' / '/') Factor)*
@@ -314,41 +364,41 @@ namespace HexTex.Dypa.PEG {
                 new CallbackHandler(new Sequence(new LiteralChar("+-"), eMultiplicative, eAdditiveSuffix), delegate(object v) {
                     IVector a = (IVector)v;
                     IVector tail = (IVector)a[2];
-                    return ParserHelper.VectorFactory.InsertBefore(a[0], ParserHelper.VectorFactory.InsertBefore(a[1], tail));
+                    return factory.InsertBefore(a[0], factory.InsertBefore(a[1], tail));
                 //return v;
                 //return ((object[])v)[1];
             }),
                 //new EmptyExpression(null));
-                new EmptyRule(ParserHelper.VectorFactory.Empty));
+                new EmptyRule(factory.Empty));
             //eAdditive.Expression = new CallbackHandler( new Sequence(eMultiplicative, eAdditiveSuffix), DoAdd);
             eAdditive.Expression = new CallbackHandler(new Sequence(eMultiplicative, eAdditiveSuffix), delegate(object v) {
                 IVector a = (IVector)v;
                 IVector tail = (IVector)a[1];
-                return ParserHelper.VectorFactory.InsertBefore(a[0], tail);
+                return factory.InsertBefore(a[0], tail);
             });
             Placeholder eMultiplicativeSuffix = new Placeholder();
             eMultiplicativeSuffix.Expression = new FirstOf(
                 new CallbackHandler(new Sequence(new LiteralChar("*/"), eSingular, eMultiplicativeSuffix), delegate(object v) {
                     IVector a = (IVector)v;
                     IVector tail = (IVector)a[2];
-                    return ParserHelper.VectorFactory.InsertBefore(a[0], ParserHelper.VectorFactory.InsertBefore(a[1], tail));
+                    return factory.InsertBefore(a[0], factory.InsertBefore(a[1], tail));
                 //return v;
                 //return ((object[])v)[1];
             }),
                 //new EmptyExpression(null));
-                new EmptyRule(ParserHelper.VectorFactory.Empty));
+                new EmptyRule(factory.Empty));
             //eMultiplicative.Expression = new CallbackHandler(new Sequence(eSingular, eMultiplicativeSuffix), DoMultiply);
             eMultiplicative.Expression = new CallbackHandler(new Sequence(eSingular, eMultiplicativeSuffix), delegate(object v) {
                 IVector a = (IVector)v;
                 IVector tail = (IVector)a[1];
-                if (tail == ParserHelper.VectorFactory.Empty) return a[0];
-                return ParserHelper.VectorFactory.InsertBefore(a[0], tail);
+                if (tail == factory.Empty) return a[0];
+                return factory.InsertBefore(a[0], tail);
             });
             Rule expr = eAdditive;
 
-            {                
-                //Result r = expr.Match(TextCursor.Create("12+345+6+7890"));
-                Result r = expr.Match(TextCursor.Create("12+3*45+6+7*(6+2)*9+0"));
+            {
+                var parser = new Parser(expr, TextCursor.Create("12+3*45+6+7*(6+2)*9+0"));
+                Result r = parser.Run();
                 //string expected = "(+ 12 (* 3 45) 6 (* 7 8 9) 0)";
                 string expected = "(12 + (3 * 45) + 6 + (7 * (6 + 2) * 9) + 0)";
                 Assert.IsNotNull(r);
@@ -356,7 +406,8 @@ namespace HexTex.Dypa.PEG {
                 Assert.AreEqual(expected, Convert.ToString(r.Value).Replace("\"", "").Replace("'", ""));
             }
             {
-                Result r = expr.Match(TextCursor.Create("120+34*((5*6+7)*8+9)-1"));
+                var parser = new Parser(expr, TextCursor.Create("120+34*((5*6+7)*8+9)-1"));
+                Result r = parser.Run();
                 Assert.IsNotNull(r);
                 Assert.AreEqual(TextCursor.EOI, r.Cursor.Peek());
                 //Assert.AreEqual(120 + 34 * ((5 * 6 + 7) * 8 + 9) - 1, r.Value);
@@ -377,16 +428,15 @@ namespace HexTex.Dypa.PEG {
         [Test]
         public void TestCalc2A() {
             LispPrinter.PrintVectorsAsLists = true;//required to compare the result
-            ParserHelper.UseArray(true);//Use ArrayVectorFactory
-            TestCalc2();
+            TestCalc2(true);//Use ArrayVectorFactory
         }
         [Test]
         public void TestCalc2B() {
-            ParserHelper.UseArray(false);//Use BNodeVectorFactory
-            TestCalc2();
+            TestCalc2(false);//Use BNodeVectorFactory
         }
-        [Test]
-        public void TestCalc2() {
+        //[Test]//used by TestCalc2A and TestCalc2B
+        public void TestCalc2(bool useArray) {
+            IVectorFactory factory = useArray ? (IVectorFactory)new ArrayVectorFactory() : (IVectorFactory)new BNodeVectorFactory();
             /*
                 E ← T ((‘+’ / ‘-’) T)*
                 T ← F (('*' / '/') F)*
@@ -400,20 +450,31 @@ namespace HexTex.Dypa.PEG {
             Placeholder eMultiplicative = new Placeholder();
             Rule eSingular = new FirstOf(eNumber, new ExtractOne(1, new Sequence(new Literal('('), eAdditive, new Literal(')'))));
             //
+            var BinaryInfixToPrefix = new Function(delegate(object v) {
+                IVector a = (IVector)v;
+                IVector tail = (IVector)a[1];
+                object x = a[0];
+                while (tail != factory.Empty) {
+                    x = factory.Create(tail[0], x, tail[1]);
+                    tail = (IVector)tail[2];
+                }
+                return x;
+            });
             Placeholder eAdditiveSuffix = new Placeholder();
             eAdditiveSuffix.Expression = new FirstOf(
                 new Sequence(new LiteralChar("+-"), eMultiplicative, eAdditiveSuffix),
-                new EmptyRule(ParserHelper.VectorFactory.Empty));
+                new EmptyRule(factory.Empty));
             eAdditive.Expression = new CallbackHandler(new Sequence(eMultiplicative, eAdditiveSuffix), BinaryInfixToPrefix);
             Placeholder eMultiplicativeSuffix = new Placeholder();
             eMultiplicativeSuffix.Expression = new FirstOf(
                 new Sequence(new LiteralChar("*/"), eSingular, eMultiplicativeSuffix),
-                new EmptyRule(ParserHelper.VectorFactory.Empty));
+                new EmptyRule(factory.Empty));
             eMultiplicative.Expression = new CallbackHandler(new Sequence(eSingular, eMultiplicativeSuffix), BinaryInfixToPrefix);
             Rule expr = eAdditive;
 
             {
-                Result r = expr.Match(TextCursor.Create("12+3*45+6+7*(6+2)*9+0"));
+                var parser = new Parser(expr, TextCursor.Create("12+3*45+6+7*(6+2)*9+0"));
+                Result r = parser.Run();
                 string expected = "(+ (+ (+ (+ 12 (* 3 45)) 6) (* (* 7 (+ 6 2)) 9)) 0)";
                 Assert.IsNotNull(r);
                 Assert.AreEqual(TextCursor.EOI, r.Cursor.Peek());
@@ -422,34 +483,41 @@ namespace HexTex.Dypa.PEG {
                 Assert.AreEqual(Convert.ToDouble(12 + 3 * 45 + 6 + 7 * (6 + 2) * 9 + 0), num);
             }
             {
-                ParserHelper.Instance = new ParserHelper();
-                Result r = expr.Match(TextCursor.Create("12+3*4a5+6+7*(6+2)*9+0"));
+                var parser = new Parser(expr, TextCursor.Create("12+3*4a5+6+7*(6+2)*9+0"));
+                Result r = parser.Run();
                 //Assert.IsNull(r);
                 Assert.AreNotEqual(TextCursor.EOI, r.Cursor.Peek());
-                //Console.WriteLine(ParserHelper.Instance.GetError());
-                Assert.AreEqual(6, ParserHelper.Instance.FailCursor.Position);
+                //Console.WriteLine(parser.GetError());
+                Assert.AreEqual(6, parser.FailCursor.Position);
             }
             {
-                ParserHelper.Instance = new ParserHelper();
-                Result r = expr.Match(TextCursor.Create("12+3*45+(6+7*(6+2)*9+0"));
+                var parser = new Parser(expr, TextCursor.Create("12+3*45+(6+7*(6+2)*9+0"));
+                Result r = parser.Run();
                 //Assert.IsNull(r);
                 Assert.AreNotEqual(TextCursor.EOI, r.Cursor.Peek());
-                //Console.WriteLine(ParserHelper.Instance.GetError());
-                Assert.AreEqual(22, ParserHelper.Instance.FailCursor.Position);
+                //Console.WriteLine(parser.GetError());
+                Assert.AreEqual(22, parser.FailCursor.Position);
             }
             {
-                ParserHelper.Instance = new ParserHelper();
-                Result r = expr.Match(TextCursor.Create("(12+3*45+(6+7*(6+2)*9+0)"));
+                var parser = new Parser(expr, TextCursor.Create("(12+3*45+(6+7*(6+2)*9+0)"));
+                Result r = parser.Run();
                 Assert.IsNull(r);
                 //Assert.AreNotEqual(TextCursor.EOI, r.Cursor.Peek());
-                //Console.WriteLine(ParserHelper.Instance.GetError());
-                Assert.AreEqual(24, ParserHelper.Instance.FailCursor.Position);
+                //Console.WriteLine(parser.GetError());
+                Assert.AreEqual(24, parser.FailCursor.Position);
             }
         }
 
         [Test]
-        public void TestCalc2Repeaters() {
-            ParserHelper.UseArray(false);
+        public void TestCalc2RepeatersA() {
+            TestCalc2Repeaters(true);
+        }
+        [Test]
+        public void TestCalc2RepeatersB() {
+            TestCalc2Repeaters(false);
+        }
+        public void TestCalc2Repeaters(bool useArray) {
+            IVectorFactory factory = useArray ? (IVectorFactory)new ArrayVectorFactory() : (IVectorFactory)new BNodeVectorFactory();
             /*
                 E ← T ((‘+’ / ‘-’) T)*
                 T ← F (('*' / '/') F)*
@@ -465,10 +533,10 @@ namespace HexTex.Dypa.PEG {
                     IVector v = (IVector)z;
                     object v0 = v[0];
                     IVector v1 = (IVector)v[1];
-                    if (v1 == ParserHelper.VectorFactory.Empty) return v0;
+                    if (v1 == factory.Empty) return v0;
                     for (int i = 0; i < v1.Length; i++) {
                         IVector vv = (IVector)v1[i];
-                        v0 = ParserHelper.VectorFactory.Create(vv[0], v0, vv[1]);
+                        v0 = factory.Create(vv[0], v0, vv[1]);
                     }
                     return v0;
                 };
@@ -476,7 +544,8 @@ namespace HexTex.Dypa.PEG {
             expr.Expression = new CallbackHandler(new Sequence(term, Some.ZeroOrMore(new Sequence(new LiteralChar("+-"), term))), toPrefix);
 
             {
-                Result r = expr.Match(TextCursor.Create("12+3*45+6+7*(6+2)*9+0"));
+                var parser = new Parser(expr, TextCursor.Create("12+3*45+6+7*(6+2)*9+0"));
+                Result r = parser.Run();
                 string expected = "(+ (+ (+ (+ 12 (* 3 45)) 6) (* (* 7 (+ 6 2)) 9)) 0)";
                 Assert.IsNotNull(r);
                 Assert.AreEqual(TextCursor.EOI, r.Cursor.Peek());
@@ -485,39 +554,28 @@ namespace HexTex.Dypa.PEG {
                 Assert.AreEqual(Convert.ToDouble(12 + 3 * 45 + 6 + 7 * (6 + 2) * 9 + 0), num);
             }
             {
-                ParserHelper.Instance = new ParserHelper();
-                Result r = expr.Match(TextCursor.Create("12+3*4a5+6+7*(6+2)*9+0"));
+                var parser = new Parser(expr, TextCursor.Create("12+3*4a5+6+7*(6+2)*9+0"));
+                Result r = parser.Run();
                 Assert.IsNotNull(r);
                 Assert.AreNotEqual(TextCursor.EOI, r.Cursor.Peek());
-                //Console.WriteLine(ParserHelper.Instance.GetError());
-                Assert.AreEqual(6, ParserHelper.Instance.FailCursor.Position);
+                //Console.WriteLine(parser.GetError());
+                Assert.AreEqual(6, parser.FailCursor.Position);
             }
             {
-                ParserHelper.Instance = new ParserHelper();
-                Result r = expr.Match(TextCursor.Create("12+3*45+(6+7*(6+2)*9+0"));
+                var parser = new Parser(expr, TextCursor.Create("12+3*45+(6+7*(6+2)*9+0"));
+                Result r = parser.Run();
                 Assert.IsNotNull(r);
                 Assert.AreNotEqual(TextCursor.EOI, r.Cursor.Peek());
-                //Console.WriteLine(ParserHelper.Instance.GetError());
-                Assert.AreEqual(22, ParserHelper.Instance.FailCursor.Position);
+                //Console.WriteLine(parser.GetError());
+                Assert.AreEqual(22, parser.FailCursor.Position);
             }
             {
-                ParserHelper.Instance = new ParserHelper();
-                Result r = expr.Match(TextCursor.Create("(12+3*45+(6+7*(6+2)*9+0)"));
+                var parser = new Parser(expr, TextCursor.Create("(12+3*45+(6+7*(6+2)*9+0)"));
+                Result r = parser.Run();
                 Assert.IsNull(r);
-                //Console.WriteLine(ParserHelper.Instance.GetError());
-                Assert.AreEqual(24, ParserHelper.Instance.FailCursor.Position);
+                //Console.WriteLine(parser.GetError());
+                Assert.AreEqual(24, parser.FailCursor.Position);
             }
-        }
-
-        private static object BinaryInfixToPrefix(object v) {
-            IVector a = (IVector)v;
-            IVector tail = (IVector)a[1];
-            object x = a[0];
-            while (tail != ParserHelper.VectorFactory.Empty) {
-                x = ParserHelper.VectorFactory.Create(tail[0], x, tail[1]);
-                tail = (IVector)tail[2];
-            }
-            return x;
         }
 
     }
