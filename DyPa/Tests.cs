@@ -397,7 +397,7 @@ namespace HexTex.Dypa.PEG {
             Rule expr = eAdditive;
 
             {
-                var parser = new Parser(expr, TextCursor.Create("12+3*45+6+7*(6+2)*9+0"));
+                var parser = new Parser(expr, TextCursor.Create("12+3*45+6+7*(6+2)*9+0"), factory);
                 Result r = parser.Run();
                 //string expected = "(+ 12 (* 3 45) 6 (* 7 8 9) 0)";
                 string expected = "(12 + (3 * 45) + 6 + (7 * (6 + 2) * 9) + 0)";
@@ -406,24 +406,13 @@ namespace HexTex.Dypa.PEG {
                 Assert.AreEqual(expected, Convert.ToString(r.Value).Replace("\"", "").Replace("'", ""));
             }
             {
-                var parser = new Parser(expr, TextCursor.Create("120+34*((5*6+7)*8+9)-1"));
+                var parser = new Parser(expr, TextCursor.Create("120+34*((5*6+7)*8+9)-1"), factory);
                 Result r = parser.Run();
                 Assert.IsNotNull(r);
                 Assert.AreEqual(TextCursor.EOI, r.Cursor.Peek());
                 //Assert.AreEqual(120 + 34 * ((5 * 6 + 7) * 8 + 9) - 1, r.Value);
             }
         }
-        private object DoMultiply(object v) {
-            object[] a = (object[])v;
-            if (a[1] == null) return a[0];
-            return Convert.ToString(Int64.Parse(Convert.ToString(a[0])) * Int64.Parse(Convert.ToString(a[1])));
-        }
-        private object DoAdd(object v) {
-            object[] a = (object[])v;
-            if (a[1] == null) return a[0];
-            return Convert.ToString(Int64.Parse(Convert.ToString(a[0])) + Int64.Parse(Convert.ToString(a[1])));
-        }
-
 
         [Test]
         public void TestCalc2A() {
@@ -473,7 +462,7 @@ namespace HexTex.Dypa.PEG {
             Rule expr = eAdditive;
 
             {
-                var parser = new Parser(expr, TextCursor.Create("12+3*45+6+7*(6+2)*9+0"));
+                var parser = new Parser(expr, TextCursor.Create("12+3*45+6+7*(6+2)*9+0"), factory);
                 Result r = parser.Run();
                 string expected = "(+ (+ (+ (+ 12 (* 3 45)) 6) (* (* 7 (+ 6 2)) 9)) 0)";
                 Assert.IsNotNull(r);
@@ -483,7 +472,7 @@ namespace HexTex.Dypa.PEG {
                 Assert.AreEqual(Convert.ToDouble(12 + 3 * 45 + 6 + 7 * (6 + 2) * 9 + 0), num);
             }
             {
-                var parser = new Parser(expr, TextCursor.Create("12+3*4a5+6+7*(6+2)*9+0"));
+                var parser = new Parser(expr, TextCursor.Create("12+3*4a5+6+7*(6+2)*9+0"), factory);
                 Result r = parser.Run();
                 //Assert.IsNull(r);
                 Assert.AreNotEqual(TextCursor.EOI, r.Cursor.Peek());
@@ -493,7 +482,7 @@ namespace HexTex.Dypa.PEG {
                 Assert.AreEqual(6, parser.FailCursor.Position);
             }
             {
-                var parser = new Parser(expr, TextCursor.Create("12+3*45+(6+7*(6+2)*9+0"));
+                var parser = new Parser(expr, TextCursor.Create("12+3*45+(6+7*(6+2)*9+0"), factory);
                 Result r = parser.Run();
                 //Assert.IsNull(r);
                 Assert.AreNotEqual(TextCursor.EOI, r.Cursor.Peek());
@@ -503,7 +492,7 @@ namespace HexTex.Dypa.PEG {
                 Assert.AreEqual(22, parser.FailCursor.Position);
             }
             {
-                var parser = new Parser(expr, TextCursor.Create("(12+3*45+(6+7*(6+2)*9+0)"));
+                var parser = new Parser(expr, TextCursor.Create("(12+3*45+(6+7*(6+2)*9+0)"), factory);
                 Result r = parser.Run();
                 Assert.IsNull(r);
                 //Assert.AreNotEqual(TextCursor.EOI, r.Cursor.Peek());
@@ -550,7 +539,7 @@ namespace HexTex.Dypa.PEG {
             expr.Expression = new CallbackHandler(new Sequence(term, Some.ZeroOrMore(new Sequence(new LiteralChar("+-"), term))), toPrefix);
 
             {
-                var parser = new Parser(expr, TextCursor.Create("12+3*45+6+7*(6+2)*9+0"));
+                var parser = new Parser(expr, TextCursor.Create("12+3*45+6+7*(6+2)*9+0"), factory);
                 Result r = parser.Run();
                 string expected = "(+ (+ (+ (+ 12 (* 3 45)) 6) (* (* 7 (+ 6 2)) 9)) 0)";
                 Assert.IsNotNull(r);
@@ -560,7 +549,7 @@ namespace HexTex.Dypa.PEG {
                 Assert.AreEqual(Convert.ToDouble(12 + 3 * 45 + 6 + 7 * (6 + 2) * 9 + 0), num);
             }
             {
-                var parser = new Parser(expr, TextCursor.Create("12+3*4a5+6+7*(6+2)*9+0"));
+                var parser = new Parser(expr, TextCursor.Create("12+3*4a5+6+7*(6+2)*9+0"), factory);
                 Result r = parser.Run();
                 Assert.IsNotNull(r);
                 Assert.AreNotEqual(TextCursor.EOI, r.Cursor.Peek());
@@ -570,7 +559,7 @@ namespace HexTex.Dypa.PEG {
                 Assert.AreEqual(6, parser.FailCursor.Position);
             }
             {
-                var parser = new Parser(expr, TextCursor.Create("12+3*45+(6+7*(6+2)*9+0"));
+                var parser = new Parser(expr, TextCursor.Create("12+3*45+(6+7*(6+2)*9+0"), factory);
                 Result r = parser.Run();
                 Assert.IsNotNull(r);
                 Assert.AreNotEqual(TextCursor.EOI, r.Cursor.Peek());
@@ -580,7 +569,7 @@ namespace HexTex.Dypa.PEG {
                 Assert.AreEqual(22, parser.FailCursor.Position);
             }
             {
-                var parser = new Parser(expr, TextCursor.Create("(12+3*45+(6+7*(6+2)*9+0)"));
+                var parser = new Parser(expr, TextCursor.Create("(12+3*45+(6+7*(6+2)*9+0)"), factory);
                 Result r = parser.Run();
                 Assert.IsNull(r);
                 if (System.Diagnostics.Debugger.IsAttached) {

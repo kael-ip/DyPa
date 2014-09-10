@@ -332,7 +332,7 @@ namespace HexTex.Dypa.PEG {
     }
 
     public class Parser {
-        private IVectorFactory factory = new ArrayVectorFactory();
+        private IVectorFactory factory;
         public IVectorFactory VectorFactory { get { return factory; } }
 
         protected Rule rule;
@@ -365,7 +365,11 @@ namespace HexTex.Dypa.PEG {
             failCursor = cursor;
             failExpression = expr;
         }
-        public Parser(Rule rule, ICursor cursor) {
+        public Parser(Rule rule, ICursor cursor)
+            : this(rule, cursor, new ArrayVectorFactory()) {
+        }
+        public Parser(Rule rule, ICursor cursor, IVectorFactory factory) {
+            this.factory = factory;
             this.rule = rule;
             this.cursor = cursor;
         }
