@@ -230,6 +230,29 @@ namespace HexTex.Dypa.PEG {
 
     }
 
+    public class Predicate : Rule {
+        private Rule item;
+        private bool inverse;
+        public Predicate(Rule item, bool inverse) {
+            this.item = item;
+            this.inverse = inverse;
+        }
+        public override Result Match(Parser parser, ICursor cursor) {
+            Result r = item.Match(parser, cursor);
+            if (r == null && inverse || r != null && !inverse) {
+                return new Result(cursor, null);
+            } else {
+                return null;
+            }
+        }
+        public static Rule And(Rule item) {
+            return new Predicate(item, false);
+        }
+        public static Rule Not(Rule item) {
+            return new Predicate(item, true);
+        }
+    }
+
     public abstract class Handler : Rule {
         private Rule expr;
         public Handler(Rule expr) {

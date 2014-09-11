@@ -277,6 +277,115 @@ namespace HexTex.Dypa.PEG {
         }
 
         [Test]
+        public void TestNotPredicateMatcher() {
+            {//nested comments example
+                var allchars = new LiteralChar("0123456789/* ");
+                var _open = new Sequence(new LiteralChar("/"), new LiteralChar("*"));
+                var _close = new Sequence(new LiteralChar("*"), new LiteralChar("/"));
+                var _nested = new Placeholder();
+                var _block = new Sequence(_open, Some.ZeroOrMore(_nested), _close);
+                _nested.Expression = new FirstOf(_block, new Sequence(Predicate.Not(_open), Predicate.Not(_close), allchars));
+                var q = new Sequence(Some.ZeroOrMore(_nested), new Literal(TextCursor.EOI));
+                {
+                    var parser = new Parser(q, TextCursor.Create("  ** /"));
+                    var r = parser.Run();
+                    Assert.IsNotNull(r);                   
+                }
+                {
+                    var parser = new Parser(q, TextCursor.Create("  **/"));
+                    var r = parser.Run();
+                    Assert.IsNull(r);
+                    Assert.IsNotNull(parser.FailCursor);
+                    if (System.Diagnostics.Debugger.IsAttached) {
+                        System.Diagnostics.Debug.WriteLine(parser.GetError());
+                    }
+                    Assert.AreEqual(3, parser.FailCursor.Position);
+                }
+                {
+                    var parser = new Parser(q, TextCursor.Create(" 12 34 /* 5 6 7*8/*9 0/**/ */* * */"));
+                    var r = parser.Run();
+                    Assert.IsNotNull(r);
+                }
+                {
+                    var parser = new Parser(q, TextCursor.Create(" 12 34 /* 5 6 7*8/*9 0/* */* * */"));
+                    var r = parser.Run();
+                    Assert.IsNull(r);
+                    Assert.IsNotNull(parser.FailCursor);
+                    if (System.Diagnostics.Debugger.IsAttached) {
+                        System.Diagnostics.Debug.WriteLine(parser.GetError());
+                    }
+                    Assert.AreEqual(33, parser.FailCursor.Position);
+                }
+            }
+        }
+
+        [Test]
+        public void TestAndPredicateMatcher() {
+            {//classic {a^n b^n c^n | n>=1} example
+                var _a = new Placeholder();
+                _a.Expression = new Sequence(new LiteralChar("a"), Some.Optional(_a), new LiteralChar("b"));
+                var _b = new Placeholder();
+                _b.Expression = new Sequence(new LiteralChar("b"), Some.Optional(_b), new LiteralChar("c"));
+                var q = new Sequence(Predicate.And(new Sequence(_a, Predicate.Not(new LiteralChar("b")))), Some.OneOrMore(new LiteralChar("a")), _b, new Literal(TextCursor.EOI));
+                {
+                    var parser = new Parser(q, TextCursor.Create("aaabbbccc"));
+                    var r = parser.Run();
+                    Assert.IsNotNull(r);
+                }
+                {
+                    var parser = new Parser(q, TextCursor.Create("abc"));
+                    var r = parser.Run();
+                    Assert.IsNotNull(r);
+                }
+                {
+                    var parser = new Parser(q, TextCursor.Create("aabbc"));
+                    var r = parser.Run();
+                    Assert.IsNull(r);
+                }
+                {
+                    var parser = new Parser(q, TextCursor.Create("aabbccc"));
+                    var r = parser.Run();
+                    Assert.IsNull(r);
+                }
+                {
+                    var parser = new Parser(q, TextCursor.Create("aabccc"));
+                    var r = parser.Run();
+                    Assert.IsNull(r);
+                }
+                {
+                    var parser = new Parser(q, TextCursor.Create("aabcc"));
+                    var r = parser.Run();
+                    Assert.IsNull(r);
+                }
+                {
+                    var parser = new Parser(q, TextCursor.Create("aabbbc"));
+                    var r = parser.Run();
+                    Assert.IsNull(r);
+                }
+                {
+                    var parser = new Parser(q, TextCursor.Create("aabbbcc"));
+                    var r = parser.Run();
+                    Assert.IsNull(r);
+                }
+                {
+                    var parser = new Parser(q, TextCursor.Create("aacbb"));
+                    var r = parser.Run();
+                    Assert.IsNull(r);
+                }
+                {
+                    var parser = new Parser(q, TextCursor.Create("aabbac"));
+                    var r = parser.Run();
+                    Assert.IsNull(r);
+                }
+                {
+                    var parser = new Parser(q, TextCursor.Create("bca"));
+                    var r = parser.Run();
+                    Assert.IsNull(r);
+                }
+            }
+        }
+
+        [Test]
         public void LookAheadTest() {
             /*
                  expr:
