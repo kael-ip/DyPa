@@ -7,7 +7,7 @@
  ********************************************************************/
 //TODO: automatic left recursion eliminator
 //-DONE: ?,+,* operators
-//TODO: &,! operators
+//-DONE: &,! operators
 //TODO: character class selector
 //TODO: placeholder remover
 //TODO: prefix remover
