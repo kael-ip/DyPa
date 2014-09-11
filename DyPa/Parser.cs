@@ -135,6 +135,22 @@ namespace HexTex.Dypa.PEG {
             return new Result(cursor.Pop(), c);
         }
     }
+    public class LiteralString : Rule {
+        private string chars;
+        public LiteralString(string chars) {
+            this.chars = chars;
+        }
+        public override Result Match(Parser parser, ICursor cursor) {
+            ICursor cur = cursor;
+            for (int i = 0; i < chars.Length; i++) {
+                object c = cur.Peek();
+                if (!typeof(char).IsInstanceOfType(c)) { parser.RememberFail(cursor, this); return null; }
+                if (!Equals(chars[i], (char)c)) { parser.RememberFail(cursor, this); return null; }
+                cur = cur.Pop();
+            }
+            return new Result(cur, chars);
+        }
+    }
 
     public class Sequence : Rule {
         private Rule[] items;
