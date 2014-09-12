@@ -51,7 +51,7 @@ namespace HexTex.Dypa.PEG {
         [Test]
         public void TestMatchPrimitives() {
             {
-                var q = new LiteralChar("0123456789");
+                var q = new LiteralAnyCharOf("0123456789");
                 {
                     var parser = new Parser(q, TextCursor.Create("7"));
                     var r = parser.Run();
@@ -68,14 +68,33 @@ namespace HexTex.Dypa.PEG {
                 }
             }
             {
-                var q = new Literal(TextCursor.EOI);
+                var q = new Literal('z');
+                {
+                    var parser = new Parser(q, TextCursor.Create("z"));
+                    var r = parser.Run();
+                    Assert.IsNotNull(r);
+                    Assert.IsNull(parser.FailCursor);
+                    Assert.AreEqual(1, r.Cursor.Position);
+                    Assert.AreEqual('z', r.Value);
+                }
+                {
+                    var parser = new Parser(q, TextCursor.Create("0123"));
+                    var r = parser.Run();
+                    Assert.IsNull(r);
+                    Assert.IsNotNull(parser.FailCursor);
+                    Assert.AreEqual(0, parser.FailCursor.Position);
+                }
+            }
+            {
+                var q = new LiteralEOI();
                 {
                     var parser = new Parser(q, TextCursor.Create(""));
                     var r = parser.Run();
                     Assert.IsNotNull(r);
                     Assert.IsNull(parser.FailCursor);
                     Assert.AreEqual(0, r.Cursor.Position);
-                    Assert.AreEqual(TextCursor.EOI, r.Value);
+                    Assert.IsTrue(!r.Cursor.CanPop());
+                    Assert.AreEqual(null, r.Value);
                 }
                 {
                     var parser = new Parser(q, TextCursor.Create("0123"));
@@ -90,7 +109,7 @@ namespace HexTex.Dypa.PEG {
         [Test]
         public void TestSequence() {
             {
-                var q = new Sequence(new LiteralChar("abc"), new LiteralChar("+-"), new LiteralChar("def"), new Literal(TextCursor.EOI));
+                var q = new Sequence(new LiteralAnyCharOf("abc"), new LiteralAnyCharOf("+-"), new LiteralAnyCharOf("def"), new LiteralEOI());
                 {
                     var parser = new Parser(q, TextCursor.Create(""));
                     var r = parser.Run();
@@ -121,7 +140,7 @@ namespace HexTex.Dypa.PEG {
                     Assert.IsTrue(r.Value is IVector);
                     Assert.AreEqual(4, v.Length);
                     Assert.AreEqual('d', v[2]);
-                    Assert.AreEqual(TextCursor.EOI, v[3]);
+                    Assert.AreEqual(null, v[3]);
                 }
             }
         }
@@ -129,7 +148,7 @@ namespace HexTex.Dypa.PEG {
         [Test]
         public void TestFirstOf() {
             {
-                var q = new FirstOf(new LiteralChar("a"), new LiteralChar("+-"), new LiteralChar("z"));
+                var q = new FirstOf(new LiteralAnyCharOf("a"), new LiteralAnyCharOf("+-"), new LiteralAnyCharOf("z"));
                 {
                     var parser = new Parser(q, TextCursor.Create(""));
                     var r = parser.Run();
@@ -158,9 +177,9 @@ namespace HexTex.Dypa.PEG {
         public void TestComposition() {
             {
                 var q = new FirstOf(
-                    new Sequence(new LiteralChar("a"), new LiteralChar("+-"), new LiteralChar("z")),
-                    new Sequence(new LiteralChar("a"), new LiteralChar("z")),
-                    new LiteralChar("?")
+                    new Sequence(new LiteralAnyCharOf("a"), new LiteralAnyCharOf("+-"), new LiteralAnyCharOf("z")),
+                    new Sequence(new LiteralAnyCharOf("a"), new LiteralAnyCharOf("z")),
+                    new LiteralAnyCharOf("?")
                     );
                 {
                     var parser = new Parser(q, TextCursor.Create(""));
@@ -221,7 +240,7 @@ namespace HexTex.Dypa.PEG {
                     var parser = new Parser(expr, TextCursor.Create("11110"));
                     Result r = parser.Run();
                     Assert.IsNotNull(r);
-                    Assert.AreEqual(TextCursor.EOI, r.Cursor.Peek());
+                    Assert.IsFalse(r.Cursor.CanPop());
                     Assert.IsTrue(r.Value is IVector);
                     IVector v = (IVector)r.Value;
                     Assert.AreEqual(2, v.Length);
@@ -236,7 +255,7 @@ namespace HexTex.Dypa.PEG {
                     var parser = new Parser(expr, TextCursor.Create("0"));
                     Result r = parser.Run();
                     Assert.IsNotNull(r);
-                    Assert.AreEqual(TextCursor.EOI, r.Cursor.Peek());
+                    Assert.IsFalse(r.Cursor.CanPop());
                     Assert.AreEqual('0', r.Value);
                 }
             }
@@ -245,11 +264,11 @@ namespace HexTex.Dypa.PEG {
         [Test]
         public void TestSomeMatcher() {
             {
-                var digit = new LiteralChar("0123456789");
+                var digit = new LiteralAnyCharOf("0123456789");
                 var q = new Sequence(
-                    Some.Optional(new LiteralChar("-")),
+                    Some.Optional(new LiteralAnyCharOf("-")),
                     Some.ZeroOrMore(digit),
-                    new LiteralChar("."),
+                    new LiteralAnyCharOf("."),
                     Some.OneOrMore(digit)
                     );
                 {
@@ -279,13 +298,13 @@ namespace HexTex.Dypa.PEG {
         [Test]
         public void TestNotPredicateMatcher() {
             {//nested comments example
-                var allchars = new LiteralChar("0123456789/* ");
-                var _open = new Sequence(new LiteralChar("/"), new LiteralChar("*"));
-                var _close = new Sequence(new LiteralChar("*"), new LiteralChar("/"));
+                var allchars = new LiteralAnyCharOf("0123456789/* ");
+                var _open = new Sequence(new LiteralAnyCharOf("/"), new LiteralAnyCharOf("*"));
+                var _close = new Sequence(new LiteralAnyCharOf("*"), new LiteralAnyCharOf("/"));
                 var _nested = new Placeholder();
                 var _block = new Sequence(_open, Some.ZeroOrMore(_nested), _close);
                 _nested.Expression = new FirstOf(_block, new Sequence(Predicate.Not(_open), Predicate.Not(_close), allchars));
-                var q = new Sequence(Some.ZeroOrMore(_nested), new Literal(TextCursor.EOI));
+                var q = new Sequence(Some.ZeroOrMore(_nested), new LiteralEOI());
                 {
                     var parser = new Parser(q, TextCursor.Create("  ** /"));
                     var r = parser.Run();
@@ -323,10 +342,10 @@ namespace HexTex.Dypa.PEG {
         public void TestAndPredicateMatcher() {
             {//classic {a^n b^n c^n | n>=1} example
                 var _a = new Placeholder();
-                _a.Expression = new Sequence(new LiteralChar("a"), Some.Optional(_a), new LiteralChar("b"));
+                _a.Expression = new Sequence(new LiteralAnyCharOf("a"), Some.Optional(_a), new LiteralAnyCharOf("b"));
                 var _b = new Placeholder();
-                _b.Expression = new Sequence(new LiteralChar("b"), Some.Optional(_b), new LiteralChar("c"));
-                var q = new Sequence(Predicate.And(new Sequence(_a, Predicate.Not(new LiteralChar("b")))), Some.OneOrMore(new LiteralChar("a")), _b, new Literal(TextCursor.EOI));
+                _b.Expression = new Sequence(new LiteralAnyCharOf("b"), Some.Optional(_b), new LiteralAnyCharOf("c"));
+                var q = new Sequence(Predicate.And(new Sequence(_a, Predicate.Not(new LiteralAnyCharOf("b")))), Some.OneOrMore(new LiteralAnyCharOf("a")), _b, new LiteralEOI());
                 {
                     var parser = new Parser(q, TextCursor.Create("aaabbbccc"));
                     var r = parser.Run();
@@ -424,13 +443,13 @@ namespace HexTex.Dypa.PEG {
                 var parser = new Parser(expr, TextCursor.Create("1+2"));
                 Result r = parser.Run();
                 Assert.IsNotNull(r);
-                Assert.AreEqual(TextCursor.EOI, r.Cursor.Peek());
+                Assert.IsFalse(r.Cursor.CanPop());
             }
             {
                 var parser = new Parser(expr, TextCursor.Create("1+2!"));
                 Result r = parser.Run();
                 Assert.IsNotNull(r);
-                Assert.AreEqual(TextCursor.EOI, r.Cursor.Peek());
+                Assert.IsFalse(r.Cursor.CanPop());
             }
         }
 
@@ -452,7 +471,7 @@ namespace HexTex.Dypa.PEG {
                 Factor ← Number / '(' Expression ')'
                 Number ← [0-9]+
              */
-            Rule eDigit = new LiteralChar("0123456789");
+            Rule eDigit = new LiteralAnyCharOf("0123456789");
             Placeholder eNumber = new Placeholder();
             //eNumber.Expression = new First(new CallbackHandler( new Sequence(eDigit, eNumber), delegate(object v){
             //    object[] a = (object[])v;
@@ -470,7 +489,7 @@ namespace HexTex.Dypa.PEG {
             //
             Placeholder eAdditiveSuffix = new Placeholder();
             eAdditiveSuffix.Expression = new FirstOf(
-                new CallbackHandler(new Sequence(new LiteralChar("+-"), eMultiplicative, eAdditiveSuffix), delegate(object v) {
+                new CallbackHandler(new Sequence(new LiteralAnyCharOf("+-"), eMultiplicative, eAdditiveSuffix), delegate(object v) {
                     IVector a = (IVector)v;
                     IVector tail = (IVector)a[2];
                     return factory.InsertBefore(a[0], factory.InsertBefore(a[1], tail));
@@ -487,7 +506,7 @@ namespace HexTex.Dypa.PEG {
             });
             Placeholder eMultiplicativeSuffix = new Placeholder();
             eMultiplicativeSuffix.Expression = new FirstOf(
-                new CallbackHandler(new Sequence(new LiteralChar("*/"), eSingular, eMultiplicativeSuffix), delegate(object v) {
+                new CallbackHandler(new Sequence(new LiteralAnyCharOf("*/"), eSingular, eMultiplicativeSuffix), delegate(object v) {
                     IVector a = (IVector)v;
                     IVector tail = (IVector)a[2];
                     return factory.InsertBefore(a[0], factory.InsertBefore(a[1], tail));
@@ -511,14 +530,14 @@ namespace HexTex.Dypa.PEG {
                 //string expected = "(+ 12 (* 3 45) 6 (* 7 8 9) 0)";
                 string expected = "(12 + (3 * 45) + 6 + (7 * (6 + 2) * 9) + 0)";
                 Assert.IsNotNull(r);
-                Assert.AreEqual(TextCursor.EOI, r.Cursor.Peek());
+                Assert.IsFalse(r.Cursor.CanPop());
                 Assert.AreEqual(expected, Convert.ToString(r.Value).Replace("\"", "").Replace("'", ""));
             }
             {
                 var parser = new Parser(expr, TextCursor.Create("120+34*((5*6+7)*8+9)-1"), factory);
                 Result r = parser.Run();
                 Assert.IsNotNull(r);
-                Assert.AreEqual(TextCursor.EOI, r.Cursor.Peek());
+                Assert.IsFalse(r.Cursor.CanPop());
                 //Assert.AreEqual(120 + 34 * ((5 * 6 + 7) * 8 + 9) - 1, r.Value);
             }
         }
@@ -541,7 +560,7 @@ namespace HexTex.Dypa.PEG {
                 F ← N / '(' E ')'
                 N ← [0-9]+
              */
-            Rule eDigit = new LiteralChar("0123456789");
+            Rule eDigit = new LiteralAnyCharOf("0123456789");
             Placeholder eNumber = new Placeholder();
             eNumber.Expression = new FirstOf(new CollapseToString(new Sequence(eDigit, eNumber)), new CallbackHandler(eDigit, Convert.ToString));
             Placeholder eAdditive = new Placeholder();
@@ -560,12 +579,12 @@ namespace HexTex.Dypa.PEG {
             });
             Placeholder eAdditiveSuffix = new Placeholder();
             eAdditiveSuffix.Expression = new FirstOf(
-                new Sequence(new LiteralChar("+-"), eMultiplicative, eAdditiveSuffix),
+                new Sequence(new LiteralAnyCharOf("+-"), eMultiplicative, eAdditiveSuffix),
                 new EmptyRule(factory.Empty));
             eAdditive.Expression = new CallbackHandler(new Sequence(eMultiplicative, eAdditiveSuffix), BinaryInfixToPrefix);
             Placeholder eMultiplicativeSuffix = new Placeholder();
             eMultiplicativeSuffix.Expression = new FirstOf(
-                new Sequence(new LiteralChar("*/"), eSingular, eMultiplicativeSuffix),
+                new Sequence(new LiteralAnyCharOf("*/"), eSingular, eMultiplicativeSuffix),
                 new EmptyRule(factory.Empty));
             eMultiplicative.Expression = new CallbackHandler(new Sequence(eSingular, eMultiplicativeSuffix), BinaryInfixToPrefix);
             Rule expr = eAdditive;
@@ -575,7 +594,7 @@ namespace HexTex.Dypa.PEG {
                 Result r = parser.Run();
                 string expected = "(+ (+ (+ (+ 12 (* 3 45)) 6) (* (* 7 (+ 6 2)) 9)) 0)";
                 Assert.IsNotNull(r);
-                Assert.AreEqual(TextCursor.EOI, r.Cursor.Peek());
+                Assert.IsFalse(r.Cursor.CanPop());
                 Assert.AreEqual(expected, Convert.ToString(r.Value).Replace("\"", "").Replace("'", ""));
                 object num = new CalculatorVisitor().Process(r.Value);
                 Assert.AreEqual(Convert.ToDouble(12 + 3 * 45 + 6 + 7 * (6 + 2) * 9 + 0), num);
@@ -584,7 +603,7 @@ namespace HexTex.Dypa.PEG {
                 var parser = new Parser(expr, TextCursor.Create("12+3*4a5+6+7*(6+2)*9+0"), factory);
                 Result r = parser.Run();
                 //Assert.IsNull(r);
-                Assert.AreNotEqual(TextCursor.EOI, r.Cursor.Peek());
+                Assert.IsTrue(r.Cursor.CanPop());
                 if (System.Diagnostics.Debugger.IsAttached) {
                     System.Diagnostics.Debug.WriteLine(parser.GetError());
                 }
@@ -594,7 +613,7 @@ namespace HexTex.Dypa.PEG {
                 var parser = new Parser(expr, TextCursor.Create("12+3*45+(6+7*(6+2)*9+0"), factory);
                 Result r = parser.Run();
                 //Assert.IsNull(r);
-                Assert.AreNotEqual(TextCursor.EOI, r.Cursor.Peek());
+                Assert.IsTrue(r.Cursor.CanPop());
                 if (System.Diagnostics.Debugger.IsAttached) {
                     System.Diagnostics.Debug.WriteLine(parser.GetError());
                 }
@@ -628,7 +647,7 @@ namespace HexTex.Dypa.PEG {
                 F ← N / '(' E ')'
                 N ← [0-9]+
              */
-            var eNumber = new CollapseToString(Some.OneOrMore(new LiteralChar("0123456789")));
+            var eNumber = new CollapseToString(Some.OneOrMore(new LiteralAnyCharOf("0123456789")));
             var factor = new Placeholder();
             var term = new Placeholder();
             var expr = new Placeholder();
@@ -644,15 +663,15 @@ namespace HexTex.Dypa.PEG {
                     }
                     return v0;
                 };
-            term.Expression = new CallbackHandler(new Sequence(factor, Some.ZeroOrMore(new Sequence(new LiteralChar("*/"), factor))), toPrefix);
-            expr.Expression = new CallbackHandler(new Sequence(term, Some.ZeroOrMore(new Sequence(new LiteralChar("+-"), term))), toPrefix);
+            term.Expression = new CallbackHandler(new Sequence(factor, Some.ZeroOrMore(new Sequence(new LiteralAnyCharOf("*/"), factor))), toPrefix);
+            expr.Expression = new CallbackHandler(new Sequence(term, Some.ZeroOrMore(new Sequence(new LiteralAnyCharOf("+-"), term))), toPrefix);
 
             {
                 var parser = new Parser(expr, TextCursor.Create("12+3*45+6+7*(6+2)*9+0"), factory);
                 Result r = parser.Run();
                 string expected = "(+ (+ (+ (+ 12 (* 3 45)) 6) (* (* 7 (+ 6 2)) 9)) 0)";
                 Assert.IsNotNull(r);
-                Assert.AreEqual(TextCursor.EOI, r.Cursor.Peek());
+                Assert.IsFalse(r.Cursor.CanPop());
                 Assert.AreEqual(expected, Convert.ToString(r.Value).Replace("\"", "").Replace("'", ""));
                 object num = new CalculatorVisitor().Process(r.Value);
                 Assert.AreEqual(Convert.ToDouble(12 + 3 * 45 + 6 + 7 * (6 + 2) * 9 + 0), num);
@@ -661,7 +680,7 @@ namespace HexTex.Dypa.PEG {
                 var parser = new Parser(expr, TextCursor.Create("12+3*4a5+6+7*(6+2)*9+0"), factory);
                 Result r = parser.Run();
                 Assert.IsNotNull(r);
-                Assert.AreNotEqual(TextCursor.EOI, r.Cursor.Peek());
+                Assert.IsTrue(r.Cursor.CanPop());
                 if (System.Diagnostics.Debugger.IsAttached) {
                     System.Diagnostics.Debug.WriteLine(parser.GetError());
                 }
@@ -671,7 +690,7 @@ namespace HexTex.Dypa.PEG {
                 var parser = new Parser(expr, TextCursor.Create("12+3*45+(6+7*(6+2)*9+0"), factory);
                 Result r = parser.Run();
                 Assert.IsNotNull(r);
-                Assert.AreNotEqual(TextCursor.EOI, r.Cursor.Peek());
+                Assert.IsTrue(r.Cursor.CanPop());
                 if (System.Diagnostics.Debugger.IsAttached) {
                     System.Diagnostics.Debug.WriteLine(parser.GetError());
                 }

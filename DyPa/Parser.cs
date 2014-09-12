@@ -38,6 +38,7 @@ namespace HexTex.Dypa.PEG {
      */
 
     public interface ICursor {
+        bool CanPop();
         ICursor Pop();
         object Peek();
         int Position { get; }
@@ -55,19 +56,19 @@ namespace HexTex.Dypa.PEG {
             if (text == null) throw new ArgumentNullException("text");
             return new TextCursor(text, 0);
         }
-        public static object EOI { get { return eoi; } }
+        public bool CanPop() { return position < text.Length; }
         public ICursor Pop() {
-            if (position < text.Length) {
+            if (CanPop()) {
                 return new TextCursor(text, position + 1);
             } else {
                 return this;
             }
         }
         public object Peek() {
-            if (position < text.Length) {
+            if (CanPop()) {
                 return text[position];
             } else {
-                return TextCursor.EOI;
+                return eoi;
             }
         }
         public int Position { get { return position; } }
@@ -110,12 +111,36 @@ namespace HexTex.Dypa.PEG {
         }
     }
 
+    #region Primitives
+
+    public class LiteralEOI : Rule {
+        public override Result Match(Parser parser, ICursor cursor) {
+            if (!cursor.CanPop()) {
+                return new Result(cursor, null);
+            }
+            parser.RememberFail(cursor, this);
+            return null;
+        }
+    }
+
+    public class LiteralAny : Rule {
+        public override Result Match(Parser parser, ICursor cursor) {
+            if (!cursor.CanPop()) { parser.RememberFail(cursor, this); return null; }
+            return MatchSome(parser, cursor);
+        }
+        protected virtual Result MatchSome(Parser parser, ICursor cursor) {
+            object t = cursor.Peek();
+            return new Result(cursor.Pop(), t);
+        }
+    }
+
     public class Literal : Rule {
         private object item;
         public Literal(object item) {
             this.item = item;
         }
         public override Result Match(Parser parser, ICursor cursor) {
+            if (!cursor.CanPop()) { parser.RememberFail(cursor, this); return null; }
             if (Equals(cursor.Peek(), item)) {
                 return new Result(cursor.Pop(), item);
             }
@@ -123,18 +148,35 @@ namespace HexTex.Dypa.PEG {
             return null;
         }
     }
-    public class LiteralChar : Rule {
+
+    public class LiteralAnyCharOf : Rule {
         private string chars;
-        public LiteralChar(string chars) {
+        public LiteralAnyCharOf(string chars) {
             this.chars = chars;
         }
         public override Result Match(Parser parser, ICursor cursor) {
+            if (!cursor.CanPop()) { parser.RememberFail(cursor, this); return null; }
             object c = cursor.Peek();
             if (!typeof(char).IsInstanceOfType(c)) { parser.RememberFail(cursor, this); return null; }
             if (chars.IndexOf((char)c) < 0) { parser.RememberFail(cursor, this); return null; }
             return new Result(cursor.Pop(), c);
         }
     }
+
+    public class LiteralCharCategory : Rule {
+        private System.Globalization.UnicodeCategory category;
+        public LiteralCharCategory(System.Globalization.UnicodeCategory category) {
+            this.category = category;
+        }
+        public override Result Match(Parser parser, ICursor cursor) {
+            if (!cursor.CanPop()) { parser.RememberFail(cursor, this); return null; }
+            object c = cursor.Peek();
+            if (!typeof(char).IsInstanceOfType(c)) { parser.RememberFail(cursor, this); return null; }
+            if (!Equals(category, char.GetUnicodeCategory((char)c))) { parser.RememberFail(cursor, this); return null; }
+            return new Result(cursor.Pop(), c);
+        }
+    }
+
     public class LiteralString : Rule {
         private string chars;
         public LiteralString(string chars) {
@@ -143,6 +185,7 @@ namespace HexTex.Dypa.PEG {
         public override Result Match(Parser parser, ICursor cursor) {
             ICursor cur = cursor;
             for (int i = 0; i < chars.Length; i++) {
+                if (!cur.CanPop()) { parser.RememberFail(cursor, this); return null; }
                 object c = cur.Peek();
                 if (!typeof(char).IsInstanceOfType(c)) { parser.RememberFail(cursor, this); return null; }
                 if (!Equals(chars[i], (char)c)) { parser.RememberFail(cursor, this); return null; }
@@ -151,6 +194,10 @@ namespace HexTex.Dypa.PEG {
             return new Result(cur, chars);
         }
     }
+
+    #endregion
+
+    #region Compositions
 
     public class Sequence : Rule {
         private Rule[] items;
@@ -269,6 +316,10 @@ namespace HexTex.Dypa.PEG {
         }
     }
 
+    #endregion
+
+    #region Handlers
+
     public abstract class Handler : Rule {
         private Rule expr;
         public Handler(Rule expr) {
@@ -370,6 +421,8 @@ namespace HexTex.Dypa.PEG {
         }
     }
 
+    #endregion
+
     public class Parser {
         private IVectorFactory factory;
         public IVectorFactory VectorFactory { get { return factory; } }
@@ -387,8 +440,12 @@ namespace HexTex.Dypa.PEG {
         public ICursor FailCursor { get { return failCursor; } }
         public string GetError() {
             if (failCursor == null) return string.Empty;
-            object unexpected = failCursor.Peek();
-            if (Equals(TextCursor.EOI, unexpected)) unexpected = "{EOI}";
+            object unexpected;
+            if (failCursor.CanPop()) {
+                unexpected = failCursor.Peek();
+            } else {
+                unexpected = "{EOI}";
+            }
             return string.Format("Syntax error at {0} (unexpected '{1}')", failCursor.Position, unexpected);
         }
         public void GoDown() {
