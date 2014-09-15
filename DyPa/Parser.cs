@@ -44,6 +44,49 @@ namespace HexTex.Dypa.PEG {
         int Position { get; }
     }
 
+    public class Cursor<T> : ICursor {
+        private IEnumerator<T> nseq;
+        private Cursor<T> next;
+        private T current;
+        private bool hasValue;
+        private int position;
+        public Cursor(IEnumerable<T> e) : this(e.GetEnumerator(), 0) { }
+        public Cursor(IEnumerator<T> seq, int position) {
+            this.hasValue = seq.MoveNext();
+            if (hasValue) {
+                this.current = seq.Current;
+            }
+            this.nseq = seq;
+            this.position = position;
+        }
+        public bool CanPop() { return hasValue; }
+        public ICursor Pop() {
+            if (CanPop()) {
+                if (next == null) {
+                    next = new Cursor<T>(nseq, position + 1);
+                }
+                return next;
+            } else {
+                return this;
+            }
+        }
+        object ICursor.Peek() {
+            if (CanPop()) {
+                return current;
+            } else {
+                return null;
+            }
+        }
+        public T Peek() {
+            if (CanPop()) {
+                return current;
+            } else {
+                return default(T);
+            }
+        }
+        public int Position { get { return position; } }
+    }
+
     public class TextCursor : ICursor {
         private string text;
         private int position;
@@ -134,18 +177,29 @@ namespace HexTex.Dypa.PEG {
         }
     }
 
-    public class Literal : Rule {
+    public abstract class Literal<T> : Rule {
+        public override Result Match(Parser parser, ICursor cursor) {
+            if (cursor.CanPop()) {
+                if (typeof(T).IsInstanceOfType(cursor.Peek())) {
+                    T item = (T)cursor.Peek();
+                    if (MatchImpl(item)) {
+                        return new Result(cursor.Pop(), item);
+                    }
+                }
+            }
+            parser.RememberFail(cursor, this);
+            return null;
+        }
+        protected abstract bool MatchImpl(T item);
+    }
+
+    public class Literal : Literal<object> {
         private object item;
         public Literal(object item) {
             this.item = item;
         }
-        public override Result Match(Parser parser, ICursor cursor) {
-            if (!cursor.CanPop()) { parser.RememberFail(cursor, this); return null; }
-            if (Equals(cursor.Peek(), item)) {
-                return new Result(cursor.Pop(), item);
-            }
-            parser.RememberFail(cursor, this);
-            return null;
+        protected override bool MatchImpl(object item) {
+            return Equals(this.item, item);
         }
     }
 

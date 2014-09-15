@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Text;
 
 namespace HexTex.Data.Common {
@@ -17,20 +19,22 @@ namespace HexTex.Data.Common {
         IVector Create(params object[] values);
         IVector InsertBefore(object o, IVector v);
         IVector Reverse(IVector v);
+        IEnumerable AsEnumerable(IVector v);
     }
 
     #region ArrayVector
 
     class Vector : IVector {
-        public object[] array;
+        private object[] items;
+        public object[] Items { get { return items; } }
         public Vector(object[] items) {
-            this.array = new object[items.Length];
-            Array.Copy(items, array, items.Length);
+            this.items = new object[items.Length];
+            System.Array.Copy(items, this.items, items.Length);
         }
         public Vector(object o, object[] rest) {
-            this.array = new object[rest.Length + 1];
-            array[0] = o;
-            Array.Copy(rest, 0, array, 1, rest.Length);
+            this.items = new object[rest.Length + 1];
+            this.items[0] = o;
+            System.Array.Copy(rest, 0, this.items, 1, rest.Length);
         }
         public override string ToString() {
             return LispPrinter.ToString(this);
@@ -38,8 +42,8 @@ namespace HexTex.Data.Common {
 
         #region IVector Members
 
-        public int Length { get { return array.Length; } }
-        public object this[int index] { get { return array[index]; } }
+        public int Length { get { return items.Length; } }
+        public object this[int index] { get { return items[index]; } }
 
         #endregion
     }
@@ -52,7 +56,7 @@ namespace HexTex.Data.Common {
         public IVector Empty { get { return empty; } }
         public IVector InsertBefore(object o, IVector v) {
             if (v is Vector) {
-                return new Vector(o, ((Vector)v).array);
+                return new Vector(o, ((Vector)v).Items);
             }
             throw new NotSupportedException();
         }
@@ -60,12 +64,15 @@ namespace HexTex.Data.Common {
             return new Vector(values);
         }
         public IVector Reverse(IVector v) {
-            if(v.Length == 0) return v;
+            if(v.Length <= 1) return v;
             object[] a = new object[v.Length];
             for (int i = 0; i < a.Length; i++) {
                 a[a.Length - i - 1] = v[i];
             }
             return this.Create(a);
+        }
+        public IEnumerable AsEnumerable(IVector v) {
+            return ((Vector)v).Items;
         }
 
         #endregion
@@ -143,7 +150,13 @@ namespace HexTex.Data.Common {
         public IVector Reverse(IVector v) {
             return (IVector)Reverse((object)v);
         }
-
+        public IEnumerable AsEnumerable(IVector v) {
+            while (v is BNode) {
+                yield return ((BNode)v).Head;
+                v = ((BNode)v).Tail as IVector;
+            }
+            yield break;
+        }
         #endregion
     }
 
@@ -180,6 +193,25 @@ namespace HexTex.Data.Common {
         }
         public static string Escape(string s) {
             return s.Replace("\"", "\\\"");
+        }
+    }
+
+    public class VectorFactoryHelper {
+        IVectorFactory factory;
+        public VectorFactoryHelper(IVectorFactory factory){
+            this.factory = factory;
+        }
+        public string ToString(IVector v) {
+            StringBuilder sb = new StringBuilder();
+            foreach (object o in factory.AsEnumerable(v)) {
+                sb.Append(o);
+            }
+            return sb.ToString();
+        }
+        public List<T> ToList<T>(IVector v) {
+            List<T> list = new List<T>();
+            foreach (T o in factory.AsEnumerable(v)) list.Add(o);
+            return list;
         }
     }
 }
