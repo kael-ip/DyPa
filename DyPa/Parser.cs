@@ -203,31 +203,23 @@ namespace HexTex.Dypa.PEG {
         }
     }
 
-    public class LiteralAnyCharOf : Rule {
+    public class LiteralAnyCharOf : Literal<char> {
         private string chars;
         public LiteralAnyCharOf(string chars) {
             this.chars = chars;
         }
-        public override Result Match(Parser parser, ICursor cursor) {
-            if (!cursor.CanPop()) { parser.RememberFail(cursor, this); return null; }
-            object c = cursor.Peek();
-            if (!typeof(char).IsInstanceOfType(c)) { parser.RememberFail(cursor, this); return null; }
-            if (chars.IndexOf((char)c) < 0) { parser.RememberFail(cursor, this); return null; }
-            return new Result(cursor.Pop(), c);
+        protected override bool MatchImpl(char item) {
+            return chars.IndexOf(item) >= 0;
         }
     }
 
-    public class LiteralCharCategory : Rule {
+    public class LiteralCharCategory : Literal<char> {
         private System.Globalization.UnicodeCategory category;
         public LiteralCharCategory(System.Globalization.UnicodeCategory category) {
             this.category = category;
         }
-        public override Result Match(Parser parser, ICursor cursor) {
-            if (!cursor.CanPop()) { parser.RememberFail(cursor, this); return null; }
-            object c = cursor.Peek();
-            if (!typeof(char).IsInstanceOfType(c)) { parser.RememberFail(cursor, this); return null; }
-            if (!Equals(category, char.GetUnicodeCategory((char)c))) { parser.RememberFail(cursor, this); return null; }
-            return new Result(cursor.Pop(), c);
+        protected override bool MatchImpl(char item) {
+            return Equals(category, char.GetUnicodeCategory(item));
         }
     }
 
