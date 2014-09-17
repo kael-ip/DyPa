@@ -1,4 +1,5 @@
-﻿using HexTex.Data.Common;
+﻿#if DEBUGTEST
+using HexTex.Data.Common;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
@@ -168,3 +169,4 @@ namespace HexTex.Dypa.PEG {
         }
     }
 }
+#endif
