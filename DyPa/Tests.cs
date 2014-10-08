@@ -15,16 +15,8 @@ namespace HexTex.Dypa.PEG {
         public void SetUp() {
         }
 
-        [Test]
-        public void TestVectorReverseA() {
-            TestVectorReverse(true);
-        }
-
-        [Test]
-        public void TestVectorReverseB() {
-            TestVectorReverse(false);
-        }
-
+        [TestCase(true)]
+        [TestCase(false)]
         public void TestVectorReverse(bool useArray) {
             IVectorFactory factory = useArray ? (IVectorFactory)new ArrayVectorFactory() : (IVectorFactory)new BNodeVectorFactory();
             {
@@ -453,17 +445,10 @@ namespace HexTex.Dypa.PEG {
             }
         }
 
-        [Test]
-        public void TestCalc1A() {
-            LispPrinter.PrintVectorsAsLists = true;//required to compare the result
-            TestCalc1(true);//Use ArrayVectorFactory
-        }
-        [Test]
-        public void TestCalc1B() {
-            TestCalc1(false);//Use BNodeVectorFactory
-        }
-        //[Test]//used by TestCalc1A and TestCalc1B
+        [TestCase(true)]
+        [TestCase(false)]
         public void TestCalc1(bool useArray) {
+            if (useArray) LispPrinter.PrintVectorsAsLists = true;//required to compare the results
             IVectorFactory factory = useArray? (IVectorFactory)new ArrayVectorFactory() : (IVectorFactory)new BNodeVectorFactory();
             /*
                 Expression ← Term ((‘+’ / ‘-’) Term)*
@@ -542,17 +527,10 @@ namespace HexTex.Dypa.PEG {
             }
         }
 
-        [Test]
-        public void TestCalc2A() {
-            LispPrinter.PrintVectorsAsLists = true;//required to compare the result
-            TestCalc2(true);//Use ArrayVectorFactory
-        }
-        [Test]
-        public void TestCalc2B() {
-            TestCalc2(false);//Use BNodeVectorFactory
-        }
-        //[Test]//used by TestCalc2A and TestCalc2B
+        [TestCase(true)]
+        [TestCase(false)]
         public void TestCalc2(bool useArray) {
+            if(useArray) LispPrinter.PrintVectorsAsLists = true;//required to compare the result
             IVectorFactory factory = useArray ? (IVectorFactory)new ArrayVectorFactory() : (IVectorFactory)new BNodeVectorFactory();
             /*
                 E ← T ((‘+’ / ‘-’) T)*
@@ -631,14 +609,8 @@ namespace HexTex.Dypa.PEG {
             }
         }
 
-        [Test]
-        public void TestCalc2RepeatersA() {
-            TestCalc2Repeaters(true);
-        }
-        [Test]
-        public void TestCalc2RepeatersB() {
-            TestCalc2Repeaters(false);
-        }
+        [TestCase(true)]
+        [TestCase(false)]
         public void TestCalc2Repeaters(bool useArray) {
             IVectorFactory factory = useArray ? (IVectorFactory)new ArrayVectorFactory() : (IVectorFactory)new BNodeVectorFactory();
             /*

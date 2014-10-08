@@ -51,14 +51,9 @@ namespace HexTex.Dypa.PEG {
                 }
             }
         }
-        [Test]
-        public void TestNestedA() {
-            TestNested(true);
-        }
-        [Test]
-        public void TestNestedB() {
-            TestNested(false);
-        }
+
+        [TestCase(true)]
+        [TestCase(false)]
         public void TestNested(bool useArray) {
             IVectorFactory factory = useArray ? (IVectorFactory)new ArrayVectorFactory() : (IVectorFactory)new BNodeVectorFactory();
             Function toString = delegate(object r) {
