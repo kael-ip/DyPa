@@ -429,12 +429,28 @@ namespace HexTex.Dypa.PEG {
 
     // expr = Sequence(item, string)
     public class CollapseToString : Handler {
-        public CollapseToString(Rule expr) : base(expr) { }
+        IVectorFactory factory;
+        public CollapseToString(Rule expr) : this(null, expr) { }
+        public CollapseToString(IVectorFactory factory, Rule expr)
+            : base(expr) {
+            this.factory = factory;
+        }
         protected override object ProcessValue(object value) {
             IVector a = (IVector)value;
-            if (a.Length == 0) return string.Empty;
-            if (a.Length == 1) return Convert.ToString(a[0]);
-            return string.Concat(a[0], a[1]);
+            int length = a.Length;
+            if (length == 0) return string.Empty;
+            if (length == 1) return Convert.ToString(a[0]);
+            System.Text.StringBuilder sb = new System.Text.StringBuilder();
+            if (factory == null) {
+                for (int i = 0; i < a.Length; i++) {
+                    sb.Append(a[i]);
+                }
+            } else {
+                foreach (object x in factory.AsEnumerable(a)) {
+                    sb.Append(x);
+                }
+            }
+            return sb.ToString();
         }
     }
 

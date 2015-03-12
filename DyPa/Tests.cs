@@ -510,10 +510,10 @@ namespace HexTex.Dypa.PEG {
             Rule expr = eAdditive;
 
             {
-                var parser = new Parser(expr, TextCursor.Create("12+3*45+6+7*(6+2)*9+0"), factory);
+                var parser = new Parser(expr, TextCursor.Create("12+3*45+6+789*(6+2)*9+0"), factory);
                 Result r = parser.Run();
                 //string expected = "(+ 12 (* 3 45) 6 (* 7 8 9) 0)";
-                string expected = "(12 + (3 * 45) + 6 + (7 * (6 + 2) * 9) + 0)";
+                string expected = "(12 + (3 * 45) + 6 + (789 * (6 + 2) * 9) + 0)";
                 Assert.IsNotNull(r);
                 Assert.IsFalse(r.Cursor.CanPop());
                 Assert.AreEqual(expected, Convert.ToString(r.Value).Replace("\"", "").Replace("'", ""));
@@ -568,14 +568,14 @@ namespace HexTex.Dypa.PEG {
             Rule expr = eAdditive;
 
             {
-                var parser = new Parser(expr, TextCursor.Create("12+3*45+6+7*(6+2)*9+0"), factory);
+                var parser = new Parser(expr, TextCursor.Create("12+3*45+6+789*(6+2)*9+0"), factory);
                 Result r = parser.Run();
-                string expected = "(+ (+ (+ (+ 12 (* 3 45)) 6) (* (* 7 (+ 6 2)) 9)) 0)";
+                string expected = "(+ (+ (+ (+ 12 (* 3 45)) 6) (* (* 789 (+ 6 2)) 9)) 0)";
                 Assert.IsNotNull(r);
                 Assert.IsFalse(r.Cursor.CanPop());
                 Assert.AreEqual(expected, Convert.ToString(r.Value).Replace("\"", "").Replace("'", ""));
                 object num = new CalculatorVisitor().Process(r.Value);
-                Assert.AreEqual(Convert.ToDouble(12 + 3 * 45 + 6 + 7 * (6 + 2) * 9 + 0), num);
+                Assert.AreEqual(Convert.ToDouble(12 + 3 * 45 + 6 + 789 * (6 + 2) * 9 + 0), num);
             }
             {
                 var parser = new Parser(expr, TextCursor.Create("12+3*4a5+6+7*(6+2)*9+0"), factory);
@@ -639,14 +639,14 @@ namespace HexTex.Dypa.PEG {
             expr.Expression = new CallbackHandler(new Sequence(term, Some.ZeroOrMore(new Sequence(new LiteralAnyCharOf("+-"), term))), toPrefix);
 
             {
-                var parser = new Parser(expr, TextCursor.Create("12+3*45+6+7*(6+2)*9+0"), factory);
+                var parser = new Parser(expr, TextCursor.Create("12+3*45+6+789*(6+2)*9+0"), factory);
                 Result r = parser.Run();
-                string expected = "(+ (+ (+ (+ 12 (* 3 45)) 6) (* (* 7 (+ 6 2)) 9)) 0)";
+                string expected = "(+ (+ (+ (+ 12 (* 3 45)) 6) (* (* 789 (+ 6 2)) 9)) 0)";
                 Assert.IsNotNull(r);
                 Assert.IsFalse(r.Cursor.CanPop());
                 Assert.AreEqual(expected, Convert.ToString(r.Value).Replace("\"", "").Replace("'", ""));
                 object num = new CalculatorVisitor().Process(r.Value);
-                Assert.AreEqual(Convert.ToDouble(12 + 3 * 45 + 6 + 7 * (6 + 2) * 9 + 0), num);
+                Assert.AreEqual(Convert.ToDouble(12 + 3 * 45 + 6 + 789 * (6 + 2) * 9 + 0), num);
             }
             {
                 var parser = new Parser(expr, TextCursor.Create("12+3*4a5+6+7*(6+2)*9+0"), factory);
