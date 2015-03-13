@@ -375,13 +375,13 @@ namespace HexTex.Dypa.PEG {
             parser.GoDown();
             try {
                 Result r = expr.Match(parser, cursor);
-                if (r != null) return new Result(r.Cursor, ProcessValue(r.Value));
+                if (r != null) return new Result(r.Cursor, ProcessValue(r.Value, parser));
                 return null;
             } finally {
                 parser.GoUp();
             }
         }
-        protected abstract object ProcessValue(object value);
+        protected abstract object ProcessValue(object value, Parser parser);
     }
 
     public delegate object Function(object arg);
@@ -392,14 +392,14 @@ namespace HexTex.Dypa.PEG {
             : base(expr) {
             this.callback = f;
         }
-        protected override object ProcessValue(object value) {
+        protected override object ProcessValue(object value, Parser parser) {
             return callback(value);
         }
     }
 
     internal class TestHandler : Handler {
         public TestHandler(Rule expr) : base(expr) { }
-        protected override object ProcessValue(object value) {
+        protected override object ProcessValue(object value, Parser parser) {
             return value;
         }
     }
@@ -415,7 +415,7 @@ namespace HexTex.Dypa.PEG {
     // expr = Sequence(item, accumulator)
     public class CollapseToArray : Handler {
         public CollapseToArray(Rule expr) : base(expr) { }
-        protected override object ProcessValue(object value) {
+        protected override object ProcessValue(object value, Parser parser) {
             object[] a = (object[])value;
             if (a[1] == null) return new object[] { a[0] };
             object[] tail = (object[])a[1];
@@ -423,32 +423,20 @@ namespace HexTex.Dypa.PEG {
             values[0] = a[0];
             Array.Copy(tail, 0, values, 1, tail.Length);
             return values;
-            //return string.Concat(a[0], a[1]);
         }
     }
 
     // expr = Sequence(item, string)
     public class CollapseToString : Handler {
-        IVectorFactory factory;
-        public CollapseToString(Rule expr) : this(null, expr) { }
-        public CollapseToString(IVectorFactory factory, Rule expr)
-            : base(expr) {
-            this.factory = factory;
-        }
-        protected override object ProcessValue(object value) {
+        public CollapseToString(Rule expr) : base(expr) { }
+        protected override object ProcessValue(object value, Parser parser) {
             IVector a = (IVector)value;
             int length = a.Length;
             if (length == 0) return string.Empty;
             if (length == 1) return Convert.ToString(a[0]);
             System.Text.StringBuilder sb = new System.Text.StringBuilder();
-            if (factory == null) {
-                for (int i = 0; i < a.Length; i++) {
-                    sb.Append(a[i]);
-                }
-            } else {
-                foreach (object x in factory.AsEnumerable(a)) {
-                    sb.Append(x);
-                }
+            foreach (object x in parser.VectorFactory.AsEnumerable(a)) {
+                sb.Append(x);
             }
             return sb.ToString();
         }
@@ -467,7 +455,7 @@ namespace HexTex.Dypa.PEG {
             : base(expr) {
             this.position = position;
         }
-        protected override object ProcessValue(object value) {
+        protected override object ProcessValue(object value, Parser parser) {
             return ((IVector)value)[position];            
         }
     }
@@ -476,7 +464,7 @@ namespace HexTex.Dypa.PEG {
     public class ExtractFirstOrSelf : Handler {
         public ExtractFirstOrSelf(Rule expr)
             : base(expr) { }
-        protected override object ProcessValue(object value) {
+        protected override object ProcessValue(object value, Parser parser) {
             IVector v = (IVector)value;
             if (v.Length == 0) return v;
             return v[0];
