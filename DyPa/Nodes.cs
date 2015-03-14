@@ -192,7 +192,7 @@ namespace HexTex.Data.Common {
             }
         }
         public static string Escape(string s) {
-            return s.Replace("\"", "\\\"");
+            return s.Replace("\\", "\\\\").Replace("\"", "\\\"");
         }
     }
 
